@@ -1,0 +1,59 @@
+from django.shortcuts import render
+
+from rest_framework import generics
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser, AllowAny
+from rest_framework.response import Response
+from .models import Movie
+from .serializers import MovieSerializer
+from .tmdb_service import search_movies, get_movie_details
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def tmdb_search(request):
+    query = request.GET.get('query', '')
+    if not query:
+        return Response({"error": "query param is required"}, status=400)
+    results = search_movies(query)
+    return Response(results)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def tmdb_import(request):
+    tmdb_id = request.data.get('tmdb_id')
+    if not tmdb_id:
+        return Response({"error": "tmdb_id is required"}, status=400)
+
+    if Movie.objects.filter(tmdb_id=tmdb_id).exists():
+        return Response({"error": "Movie already imported"}, status=400)
+
+    data = get_movie_details(tmdb_id)
+
+    movie = Movie.objects.create(
+        tmdb_id=data['id'],
+        title=data['title'],
+        overview=data.get('overview', ''),
+        poster_path=data.get('poster_path'),
+        backdrop_path=data.get('backdrop_path'),
+        release_date=data.get('release_date') or None,
+        runtime=data.get('runtime'),
+        language=data.get('original_language'),
+        rating=data.get('vote_average'),
+        genre=', '.join([g['name'] for g in data.get('genres', [])]),
+    )
+    serializer = MovieSerializer(movie)
+    return Response(serializer.data, status=201)
+
+
+class MovieListView(generics.ListAPIView):
+    queryset = Movie.objects.all()
+    serializer_class = MovieSerializer
+    permission_classes = [AllowAny]
+
+
+class MovieDetailView(generics.RetrieveAPIView):
+    queryset = Movie.objects.all()
+    serializer_class = MovieSerializer
+    permission_classes = [AllowAny]
