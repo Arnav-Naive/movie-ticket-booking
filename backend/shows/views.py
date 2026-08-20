@@ -1,5 +1,3 @@
-from django.shortcuts import render
-
 from rest_framework.response import Response
 from rest_framework import viewsets
 from cinemas.views import IsAdminOrReadOnly
@@ -8,7 +6,7 @@ from .serializers import ShowSerializer
 
 from django.db import transaction
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from .models import ShowSeat
@@ -51,7 +49,7 @@ def show_seats(request, show_id):
     for s in seats:
         status = s.status
         if status == 'HELD' and s.hold_expires_at and s.hold_expires_at < now:
-            status = 'AVAILABLE'  # expired hold, treat as available (not saved yet)
+            status = 'AVAILABLE'
         serialized = ShowSeatSerializer(s).data
         serialized['status'] = status
         data.append(serialized)
@@ -67,10 +65,20 @@ def hold_seats(request, show_id):
         return Response({"error": "seat_ids is required"}, status=400)
 
     now = timezone.now()
+
+    # Reject holding seats for a show that has already started
+    try:
+        show = Show.objects.get(id=show_id)
+    except Show.DoesNotExist:
+        return Response({"error": "Show not found"}, status=404)
+
+    show_datetime = timezone.make_aware(datetime.combine(show.date, show.start_time))
+    if show_datetime < now:
+        return Response({"error": "Cannot hold seats for a show that has already started"}, status=400)
+
     expires_at = now + timedelta(minutes=HOLD_DURATION_MINUTES)
 
     with transaction.atomic():
-        # Lock these rows so no other request can touch them until this transaction finishes
         show_seats = ShowSeat.objects.select_for_update().filter(
             show_id=show_id, seat_id__in=seat_ids
         )
@@ -90,7 +98,6 @@ def hold_seats(request, show_id):
                 status=400
             )
 
-        # All clear — hold them
         show_seats.update(status='HELD', hold_expires_at=expires_at)
 
     return Response({

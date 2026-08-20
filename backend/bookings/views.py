@@ -1,10 +1,11 @@
 from django.db import transaction
 from django.utils import timezone
+from datetime import datetime
 from rest_framework import generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from shows.models import ShowSeat
+from shows.models import ShowSeat, Show
 from .models import Booking, BookingSeat
 from .serializers import BookingSerializer
 
@@ -19,6 +20,16 @@ def create_booking(request):
         return Response({"error": "show_id and show_seat_ids are required"}, status=400)
 
     now = timezone.now()
+
+    # Reject booking for a show that has already started
+    try:
+        show_obj = Show.objects.get(id=show_id)
+    except Show.DoesNotExist:
+        return Response({"error": "Show not found"}, status=404)
+
+    show_datetime = timezone.make_aware(datetime.combine(show_obj.date, show_obj.start_time))
+    if show_datetime < now:
+        return Response({"error": "Cannot book seats for a show that has already started"}, status=400)
 
     with transaction.atomic():
         show_seats = ShowSeat.objects.select_for_update().filter(
