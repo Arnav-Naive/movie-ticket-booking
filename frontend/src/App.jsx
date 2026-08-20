@@ -1,27 +1,20 @@
-import { useState } from 'react';
-import api from './services/api';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 function App() {
-  const [message, setMessage] = useState('');
-
-  const testConnection = async () => {
-    try {
-      const res = await api.post('/auth/login/', {
-        username: 'testuser1',
-        password: 'testpass123',
-      });
-      setMessage('Connected! Access token: ' + res.data.access.substring(0, 20) + '...');
-    } catch (err) {
-      setMessage('Error: ' + err.message);
-    }
-  };
-
   return (
-    <div>
-      <h1>Connection Test</h1>
-      <button onClick={testConnection}>Test Backend Connection</button>
-      <p>{message}</p>
-    </div>
+    <BrowserRouter>
+      <nav>
+        <Link to="/">Home</Link> | <Link to="/login">Login</Link> | <Link to="/register">Register</Link>
+      </nav>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
