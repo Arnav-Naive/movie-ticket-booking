@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'users',
     'movies',
+    'cinemas',
 ]
 
 AUTH_USER_MODEL = 'users.User'
