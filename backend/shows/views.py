@@ -1,9 +1,18 @@
 from django.shortcuts import render
 
+from rest_framework.response import Response
 from rest_framework import viewsets
 from cinemas.views import IsAdminOrReadOnly
 from .models import Show
 from .serializers import ShowSerializer
+
+from django.db import transaction
+from django.utils import timezone
+from datetime import timedelta
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from .models import ShowSeat
+from .serializers import ShowSeatSerializer
 
 
 class ShowViewSet(viewsets.ModelViewSet):
@@ -28,3 +37,63 @@ class ShowViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(date=date)
 
         return queryset
+
+HOLD_DURATION_MINUTES = 5
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def show_seats(request, show_id):
+    """List all seats for a show with current status (expired holds treated as available)."""
+    now = timezone.now()
+    seats = ShowSeat.objects.filter(show_id=show_id)
+    data = []
+    for s in seats:
+        status = s.status
+        if status == 'HELD' and s.hold_expires_at and s.hold_expires_at < now:
+            status = 'AVAILABLE'  # expired hold, treat as available (not saved yet)
+        serialized = ShowSeatSerializer(s).data
+        serialized['status'] = status
+        data.append(serialized)
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def hold_seats(request, show_id):
+    """Hold one or more seats for a show. Handles concurrency with row locking."""
+    seat_ids = request.data.get('seat_ids', [])
+    if not seat_ids:
+        return Response({"error": "seat_ids is required"}, status=400)
+
+    now = timezone.now()
+    expires_at = now + timedelta(minutes=HOLD_DURATION_MINUTES)
+
+    with transaction.atomic():
+        # Lock these rows so no other request can touch them until this transaction finishes
+        show_seats = ShowSeat.objects.select_for_update().filter(
+            show_id=show_id, seat_id__in=seat_ids
+        )
+
+        if show_seats.count() != len(seat_ids):
+            return Response({"error": "One or more seats not found for this show"}, status=400)
+
+        unavailable = []
+        for s in show_seats:
+            is_expired_hold = s.status == 'HELD' and s.hold_expires_at and s.hold_expires_at < now
+            if s.status == 'BOOKED' or (s.status == 'HELD' and not is_expired_hold):
+                unavailable.append(f"{s.seat.row}{s.seat.number}")
+
+        if unavailable:
+            return Response(
+                {"error": f"Seats already unavailable: {', '.join(unavailable)}"},
+                status=400
+            )
+
+        # All clear — hold them
+        show_seats.update(status='HELD', hold_expires_at=expires_at)
+
+    return Response({
+        "message": "Seats held successfully",
+        "expires_at": expires_at
+    })
