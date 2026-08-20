@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'movies',
     'cinemas',
     'shows',
+    'bookings',
 ]
 
 AUTH_USER_MODEL = 'users.User'
