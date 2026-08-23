@@ -25,4 +25,5 @@ urlpatterns = [
     path('api/', include('cinemas.urls')),
     path('api/', include('shows.urls')),
     path('api/', include('bookings.urls')),
+    path('api/', include('payments.urls')),
 ]
