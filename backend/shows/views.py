@@ -104,3 +104,19 @@ def hold_seats(request, show_id):
         "message": "Seats held successfully",
         "expires_at": expires_at
     })
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def release_seats(request, show_id):
+    """Manually release held seats (e.g. user navigates away before booking)."""
+    seat_ids = request.data.get('seat_ids', [])
+    if not seat_ids:
+        return Response({"error": "seat_ids is required"}, status=400)
+
+    with transaction.atomic():
+        show_seats = ShowSeat.objects.select_for_update().filter(
+            show_id=show_id, seat_id__in=seat_ids, status='HELD'
+        )
+        show_seats.update(status='AVAILABLE', hold_expires_at=None)
+
+    return Response({"message": "Seats released successfully"})

@@ -128,3 +128,33 @@ def verify_ticket(request):
         "movie": booking.show.movie.title,
         "seats": [f"{bs.show_seat.seat.row}{bs.show_seat.seat.number}" for bs in booking.booking_seats.all()],
     })
+   
+# Booking Cancellation + Release Seats    
+CANCELLATION_DEADLINE_MINUTES = 30
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancel_booking(request, booking_id):
+    try:
+        booking = Booking.objects.get(id=booking_id, user=request.user)
+    except Booking.DoesNotExist:
+        return Response({"error": "Booking not found"}, status=404)
+
+    if booking.status != 'CONFIRMED':
+        return Response({"error": f"Cannot cancel a booking with status {booking.status}"}, status=400)
+
+    show_datetime = timezone.make_aware(datetime.combine(booking.show.date, booking.show.start_time))
+    deadline = show_datetime - timedelta(minutes=CANCELLATION_DEADLINE_MINUTES)
+
+    if timezone.now() > deadline:
+        return Response({"error": "Cancellation window has passed (must cancel 30+ minutes before showtime)"}, status=400)
+
+    with transaction.atomic():
+        booking.status = 'CANCELLED'
+        booking.save()
+
+        show_seat_ids = booking.booking_seats.values_list('show_seat_id', flat=True)
+        ShowSeat.objects.filter(id__in=show_seat_ids).update(status='AVAILABLE', hold_expires_at=None)
+
+    return Response({"message": "Booking cancelled successfully", "booking_reference": booking.booking_reference})
