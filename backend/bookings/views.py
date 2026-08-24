@@ -1,13 +1,16 @@
 from django.db import transaction
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timedelta
 from rest_framework import generics
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from shows.models import ShowSeat, Show
 from .models import Booking, BookingSeat
 from .serializers import BookingSerializer
+import qrcode
+import io
+import base64
 
 
 @api_view(['POST'])
@@ -74,3 +77,54 @@ class MyBookingsView(generics.ListAPIView):
 
     def get_queryset(self):
         return Booking.objects.filter(user=self.request.user).order_by('-created_at')
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def booking_ticket(request, booking_id):
+    """Get full ticket details with QR code for a confirmed booking."""
+    try:
+        booking = Booking.objects.get(id=booking_id, user=request.user)
+    except Booking.DoesNotExist:
+        return Response({"error": "Booking not found"}, status=404)
+
+    if booking.status != 'CONFIRMED':
+        return Response({"error": "Ticket only available for confirmed bookings"}, status=400)
+
+    # Generate QR code encoding the verification token (not the raw booking ID)
+    qr = qrcode.make(booking.verification_token)
+    buffer = io.BytesIO()
+    qr.save(buffer, format='PNG')
+    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+    serializer = BookingSerializer(booking)
+    data = serializer.data
+    data['qr_code'] = f"data:image/png;base64,{qr_base64}"
+
+    return Response(data)
+
+# verification endpoint
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def verify_ticket(request):
+    token = request.data.get('token')
+    if not token:
+        return Response({"error": "token is required"}, status=400)
+
+    try:
+        booking = Booking.objects.get(verification_token=token)
+    except Booking.DoesNotExist:
+        return Response({"valid": False, "reason": "Ticket not found"}, status=404)
+
+    if booking.status != 'CONFIRMED':
+        return Response({"valid": False, "reason": f"Booking status is {booking.status}, not CONFIRMED"})
+
+    show_datetime = timezone.make_aware(datetime.combine(booking.show.date, booking.show.start_time))
+    if show_datetime < timezone.now() - timedelta(hours=3):
+        return Response({"valid": False, "reason": "Show has already ended"})
+
+    return Response({
+        "valid": True,
+        "booking_reference": booking.booking_reference,
+        "movie": booking.show.movie.title,
+        "seats": [f"{bs.show_seat.seat.row}{bs.show_seat.seat.number}" for bs in booking.booking_seats.all()],
+    })

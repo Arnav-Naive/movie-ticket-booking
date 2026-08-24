@@ -18,10 +18,13 @@ class Booking(models.Model):
     total_amount = models.DecimalField(max_digits=8, decimal_places=2)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
+    verification_token = models.CharField(max_length=64, unique=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.booking_reference:
             self.booking_reference = f"BK-{uuid.uuid4().hex[:10].upper()}"
+        if not self.verification_token:
+            self.verification_token = uuid.uuid4().hex
         super().save(*args, **kwargs)
 
     def __str__(self):
