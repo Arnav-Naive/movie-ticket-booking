@@ -1,17 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 function Payment() {
-  const [bookingId, setBookingId] = useState('');
+  const { bookingId } = useParams();
+  const navigate = useNavigate();
   const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    document.body.appendChild(script);
+  }, []);
 
   const handlePay = async () => {
+    setLoading(true);
+    setStatus('');
     try {
-      // Step A: create order on backend
       const orderRes = await api.post('/payments/create-order/', { booking_id: bookingId });
       const { order_id, amount, currency, key_id } = orderRes.data;
 
-      // Step B: open Razorpay checkout
       const options = {
         key: key_id,
         amount: amount,
@@ -20,38 +29,45 @@ function Payment() {
         name: 'CineMax',
         description: 'Movie ticket booking',
         handler: async function (response) {
-          // Step C: send payment response to backend for verification
           try {
-            const verifyRes = await api.post('/payments/verify/', {
+            await api.post('/payments/verify/', {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             });
-            setStatus('Success: ' + verifyRes.data.message);
+            navigate(`/ticket/${bookingId}`);
           } catch (err) {
-            setStatus('Verification failed: ' + (err.response?.data?.error || err.message));
+            setStatus('Payment verification failed: ' + (err.response?.data?.error || err.message));
           }
         },
         theme: { color: '#e0263f' },
+        modal: {
+          ondismiss: () => setLoading(false)
+        }
       };
 
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {
       setStatus('Order creation failed: ' + (err.response?.data?.error || err.message));
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h1>Payment</h1>
-      <input
-        placeholder="Booking ID"
-        value={bookingId}
-        onChange={(e) => setBookingId(e.target.value)}
-      />
-      <button onClick={handlePay}>Pay Now</button>
-      <p>{status}</p>
+    <div className="container" style={{ padding: '60px 0', textAlign: 'center' }}>
+      <h1 style={{ marginBottom: '20px' }}>Complete Payment</h1>
+      <button
+        onClick={handlePay}
+        disabled={loading}
+        style={{
+          background: 'var(--red)', color: 'white', padding: '14px 40px',
+          borderRadius: '8px', fontWeight: 600, border: 'none', cursor: 'pointer', fontSize: '16px'
+        }}
+      >
+        {loading ? 'Opening payment...' : 'Pay Now'}
+      </button>
+      {status && <p style={{ color: 'var(--red)', marginTop: '20px' }}>{status}</p>}
     </div>
   );
 }
