@@ -6,13 +6,35 @@ function MyBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [cancellingId, setCancellingId] = useState(null);
 
-  useEffect(() => {
+  const loadBookings = () => {
     api.get('/bookings/my/')
       .then(res => setBookings(res.data))
       .catch(() => setError('Unable to load bookings.'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadBookings();
   }, []);
+
+  const handleCancel = async (bookingId) => {
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel this booking? Your refund (test mode) will be processed shortly.'
+    );
+    if (!confirmed) return;
+
+    setCancellingId(bookingId);
+    try {
+      await api.post(`/bookings/${bookingId}/cancel/`);
+      loadBookings();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Unable to cancel booking.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   if (loading) return <div className="container" style={{ padding: '60px 0' }}>Loading...</div>;
   if (error) return <div className="container" style={{ padding: '60px 0' }}>{error}</div>;
@@ -41,14 +63,29 @@ function MyBookings() {
                   <span style={{ color: statusColor(b.status) }}>{b.status}</span>
                 </div>
               </div>
-              {b.status === 'CONFIRMED' && (
-                <Link to={`/ticket/${b.id}`} style={{
-                  background: 'var(--red)', color: 'white', padding: '8px 18px',
-                  borderRadius: '6px', fontWeight: 600
-                }}>
-                  View Ticket
-                </Link>
-              )}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {b.status === 'CONFIRMED' && (
+                  <>
+                    <Link to={`/ticket/${b.id}`} style={{
+                      background: 'var(--red)', color: 'white', padding: '8px 18px',
+                      borderRadius: '6px', fontWeight: 600
+                    }}>
+                      View Ticket
+                    </Link>
+                    <button
+                      onClick={() => handleCancel(b.id)}
+                      disabled={cancellingId === b.id}
+                      style={{
+                        background: 'transparent', border: '1px solid var(--border)',
+                        color: 'var(--text-dim)', padding: '8px 18px', borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {cancellingId === b.id ? 'Cancelling...' : 'Cancel'}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
