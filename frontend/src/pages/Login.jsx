@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import api from '../services/api';
+import WebSmashIntro from '../components/WebSmashIntro';
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -19,15 +20,17 @@ function Login() {
   };
 
   return (
-    <div>
-      <h1>Login</h1>
-      <form onSubmit={handleSubmit}>
-        <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-        <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <button type="submit">Login</button>
-      </form>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-    </div>
+    <WebSmashIntro>
+      <div>
+        <h1>Login</h1>
+        <form onSubmit={handleSubmit}>
+          <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <button type="submit">Login</button>
+        </form>
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+      </div>
+    </WebSmashIntro>
   );
 }
 
