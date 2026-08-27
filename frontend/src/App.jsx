@@ -12,6 +12,9 @@ import BookingSummary from './pages/BookingSummary';
 import Ticket from './pages/Ticket';
 import MyBookings from './pages/MyBookings';
 import Footer from './components/Footer';
+import About from './pages/About';
+import Contact from './pages/Contact';
+import Terms from './pages/Terms';
 
 
 
@@ -31,6 +34,9 @@ function App() {
           <Route path="/summary/:showId" element={<BookingSummary />} />
           <Route path="/ticket/:bookingId" element={<Ticket />} />
           <Route path="/my-bookings" element={<MyBookings />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/terms" element={<Terms />} />
         </Routes>
         <Footer />
       </BrowserRouter>
