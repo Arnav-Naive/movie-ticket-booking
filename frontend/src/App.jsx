@@ -11,6 +11,7 @@ import SeatSelection from './pages/SeatSelection';
 import BookingSummary from './pages/BookingSummary';
 import Ticket from './pages/Ticket';
 import MyBookings from './pages/MyBookings';
+import Footer from './components/Footer';
 
 
 
@@ -31,6 +32,7 @@ function App() {
           <Route path="/ticket/:bookingId" element={<Ticket />} />
           <Route path="/my-bookings" element={<MyBookings />} />
         </Routes>
+        <Footer />
       </BrowserRouter>
     </AuthProvider>
   );
