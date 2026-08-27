@@ -8,6 +8,7 @@ function Home() {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     api.get('/movies/')
@@ -16,19 +17,42 @@ function Home() {
       .finally(() => setLoading(false));
   }, []);
 
+  const filteredMovies = movies.filter(m =>
+    m.title.toLowerCase().includes(search.toLowerCase())
+  );
+
   if (loading) return <div className="container" style={{ padding: '60px 0' }}>Loading movies...</div>;
   if (error) return <div className="container" style={{ padding: '60px 0' }}>{error}</div>;
 
   return (
     <div className="container" style={{ padding: '40px 0' }}>
-      <h1 style={{ marginBottom: '24px', fontSize: '28px' }}>Now Showing</h1>
-      {movies.length === 0 ? (
-        <p style={{ color: 'var(--text-dim)' }}>No movies found.</p>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginBottom: '24px', flexWrap: 'wrap', gap: '16px'
+      }}>
+        <h1 style={{ fontSize: '28px' }}>Now Showing</h1>
+        <input
+          type="text"
+          placeholder="Search movies..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            background: 'var(--card)', border: '1px solid var(--border)',
+            color: 'var(--text)', padding: '10px 16px', borderRadius: '8px',
+            fontSize: '14px', minWidth: '220px'
+          }}
+        />
+      </div>
+
+      {filteredMovies.length === 0 ? (
+        <p style={{ color: 'var(--text-dim)' }}>
+          {search ? `No movies found matching "${search}".` : 'No movies found.'}
+        </p>
       ) : (
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '20px'
         }}>
-          {movies.map(movie => (
+          {filteredMovies.map(movie => (
             <Link to={`/movies/${movie.id}`} key={movie.id} style={{
               background: 'var(--card)', border: '1px solid var(--border)',
               borderRadius: '10px', overflow: 'hidden', display: 'block'
