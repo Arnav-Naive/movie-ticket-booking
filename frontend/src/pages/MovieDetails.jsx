@@ -9,6 +9,7 @@ function MovieDetails() {
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [imgErrored, setImgErrored] = useState(false);
 
   useEffect(() => {
     api.get(`/movies/${id}/`)
@@ -21,19 +22,29 @@ function MovieDetails() {
   if (error) return <div className="container" style={{ padding: '60px 0' }}>{error}</div>;
 
   return (
-    <div className="container" style={{ padding: '40px 0', display: 'flex', gap: '32px' }}>
+    <div className="container movie-details-layout" style={{ padding: '40px 0', display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
       <div style={{ width: '280px', flexShrink: 0 }}>
-        {movie.poster_path && (
-          <img
-            src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
-            alt={movie.title}
-            style={{ width: '100%', borderRadius: '10px' }}
-          />
-        )}
+        <div style={{ aspectRatio: '2/3', borderRadius: '10px', overflow: 'hidden', background: '#1e2436' }}>
+          {movie.poster_path && !imgErrored ? (
+            <img
+              src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
+              alt={movie.title}
+              onError={() => setImgErrored(true)}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <div style={{
+              width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--text-dim)', fontSize: '14px', padding: '12px', textAlign: 'center'
+            }}>
+              {movie.title}
+            </div>
+          )}
+        </div>
       </div>
-      <div>
+      <div style={{ flex: '1', minWidth: '260px' }}>
         <h1 style={{ fontSize: '32px', marginBottom: '12px' }}>{movie.title}</h1>
-        <div style={{ display: 'flex', gap: '14px', color: 'var(--text-dim)', fontSize: '14px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '14px', color: 'var(--text-dim)', fontSize: '14px', marginBottom: '20px', flexWrap: 'wrap' }}>
           <span>★ {movie.rating}</span>
           <span>{movie.runtime} min</span>
           <span>{movie.genre}</span>
@@ -42,10 +53,7 @@ function MovieDetails() {
         <p style={{ color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: '28px', maxWidth: '600px' }}>
           {movie.overview}
         </p>
-        <Link to={`/book/${movie.id}`} style={{
-          background: 'var(--red)', color: 'white', padding: '12px 28px',
-          borderRadius: '8px', fontWeight: 600, display: 'inline-block'
-        }}>
+        <Link to={`/book/${movie.id}`} className="btn-primary" style={{ textDecoration: 'none', display: 'inline-block' }}>
           Book Tickets
         </Link>
       </div>

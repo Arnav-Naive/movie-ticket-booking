@@ -61,39 +61,41 @@ function SeatSelection() {
         SCREEN THIS WAY
       </div>
 
-      {error && <p style={{ color: 'var(--red)', marginBottom: '16px' }}>{error}</p>}
+      {error && <p style={{ color: 'var(--red)', marginBottom: '16px', textAlign: 'center' }}>{error}</p>}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginBottom: '32px' }}>
-        {rows.map(row => (
-          <div key={row} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ width: '20px', color: 'var(--text-dim)', fontSize: '13px' }}>{row}</span>
-            {seats.filter(s => s.seat_row === row).map(seat => {
-              const isSelected = selected.includes(seat.seat);
-              const isAvailable = seat.status === 'AVAILABLE';
-              return (
-                <button
-                  key={seat.id}
-                  onClick={() => toggleSeat(seat)}
-                  disabled={!isAvailable}
-                  style={{
-                    width: '36px', height: '36px', borderRadius: '6px',
-                    border: '1px solid var(--border)',
-                    background: isSelected ? 'var(--red)' : isAvailable ? 'var(--card)' : '#2a2f3a',
-                    color: isAvailable ? 'var(--text)' : '#555',
-                    cursor: isAvailable ? 'pointer' : 'not-allowed',
-                    fontSize: '11px'
-                  }}
-                  title={`${seat.seat_row}${seat.seat_number} (${seat.seat_type})`}
-                >
-                  {seat.seat_number}
-                </button>
-              );
-            })}
-          </div>
-        ))}
+      <div style={{ overflowX: 'auto', paddingBottom: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginBottom: '32px', minWidth: 'fit-content' }}>
+          {rows.map(row => (
+            <div key={row} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span style={{ width: '20px', color: 'var(--text-dim)', fontSize: '13px' }}>{row}</span>
+              {seats.filter(s => s.seat_row === row).map(seat => {
+                const isSelected = selected.includes(seat.seat);
+                const isAvailable = seat.status === 'AVAILABLE';
+                return (
+                  <button
+                    key={seat.id}
+                    onClick={() => toggleSeat(seat)}
+                    disabled={!isAvailable}
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '6px',
+                      border: '1px solid var(--border)',
+                      background: isSelected ? 'var(--red)' : isAvailable ? 'var(--card)' : '#2a2f3a',
+                      color: isAvailable ? 'var(--text)' : '#555',
+                      cursor: isAvailable ? 'pointer' : 'not-allowed',
+                      fontSize: '11px', flexShrink: 0
+                    }}
+                    title={`${seat.seat_row}${seat.seat_number} (${seat.seat_type})`}
+                  >
+                    {seat.seat_number}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginBottom: '32px', fontSize: '13px', color: 'var(--text-dim)' }}>
+      <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginBottom: '32px', fontSize: '13px', color: 'var(--text-dim)', flexWrap: 'wrap' }}>
         <span>⬜ Available</span>
         <span style={{ color: 'var(--red)' }}>⬛ Selected</span>
         <span>⬛ Booked/Held</span>
@@ -101,15 +103,7 @@ function SeatSelection() {
 
       <div style={{ textAlign: 'center' }}>
         <p style={{ marginBottom: '12px' }}>{selected.length} seat(s) selected</p>
-        <button
-          onClick={handleContinue}
-          disabled={selected.length === 0 || holding}
-          style={{
-            background: selected.length ? 'var(--red)' : 'var(--border)',
-            color: 'white', padding: '12px 32px', borderRadius: '8px',
-            fontWeight: 600, border: 'none', cursor: selected.length ? 'pointer' : 'not-allowed'
-          }}
-        >
+        <button onClick={handleContinue} disabled={selected.length === 0 || holding} className="btn-primary">
           {holding ? 'Holding seats...' : 'Continue'}
         </button>
       </div>

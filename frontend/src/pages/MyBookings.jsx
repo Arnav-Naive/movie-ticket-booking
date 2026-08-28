@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 function MyBookings() {
+  const { showToast } = useToast();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancellingId, setCancellingId] = useState(null);
+  const [confirmTarget, setConfirmTarget] = useState(null);
 
   const loadBookings = () => {
     api.get('/bookings/my/')
@@ -15,22 +19,17 @@ function MyBookings() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    loadBookings();
-  }, []);
+  useEffect(() => { loadBookings(); }, []);
 
-  const handleCancel = async (bookingId) => {
-    const confirmed = window.confirm(
-      'Are you sure you want to cancel this booking? Your refund (test mode) will be processed shortly.'
-    );
-    if (!confirmed) return;
-
+  const doCancel = async (bookingId) => {
+    setConfirmTarget(null);
     setCancellingId(bookingId);
     try {
       await api.post(`/bookings/${bookingId}/cancel/`);
+      showToast('Booking cancelled. Refund (test mode) will be processed shortly.', 'success');
       loadBookings();
     } catch (err) {
-      alert(err.response?.data?.error || 'Unable to cancel booking.');
+      showToast(err.response?.data?.error || 'Unable to cancel booking.', 'error');
     } finally {
       setCancellingId(null);
     }
@@ -54,7 +53,8 @@ function MyBookings() {
             <div key={b.id} style={{
               background: 'var(--card)', border: '1px solid var(--border)',
               borderRadius: '10px', padding: '20px',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              flexWrap: 'wrap', gap: '12px'
             }}>
               <div>
                 <div style={{ fontWeight: 600 }}>{b.movie_title}</div>
@@ -66,20 +66,13 @@ function MyBookings() {
               <div style={{ display: 'flex', gap: '10px' }}>
                 {b.status === 'CONFIRMED' && (
                   <>
-                    <Link to={`/ticket/${b.id}`} style={{
-                      background: 'var(--red)', color: 'white', padding: '8px 18px',
-                      borderRadius: '6px', fontWeight: 600
-                    }}>
+                    <Link to={`/ticket/${b.id}`} className="btn-primary" style={{ textDecoration: 'none', display: 'inline-block' }}>
                       View Ticket
                     </Link>
                     <button
-                      onClick={() => handleCancel(b.id)}
+                      className="btn-ghost"
+                      onClick={() => setConfirmTarget(b.id)}
                       disabled={cancellingId === b.id}
-                      style={{
-                        background: 'transparent', border: '1px solid var(--border)',
-                        color: 'var(--text-dim)', padding: '8px 18px', borderRadius: '6px',
-                        cursor: 'pointer'
-                      }}
                     >
                       {cancellingId === b.id ? 'Cancelling...' : 'Cancel'}
                     </button>
@@ -90,6 +83,15 @@ function MyBookings() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmTarget !== null}
+        title="Cancel this booking?"
+        message="Your refund (test mode) will be processed shortly. This cannot be undone."
+        confirmLabel="Yes, cancel"
+        onConfirm={() => doCancel(confirmTarget)}
+        onCancel={() => setConfirmTarget(null)}
+      />
     </div>
   );
 }

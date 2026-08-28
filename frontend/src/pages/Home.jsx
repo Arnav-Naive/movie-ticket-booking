@@ -4,6 +4,28 @@ import api from '../services/api';
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w342';
 
+function MoviePoster({ path, title }) {
+  const [errored, setErrored] = useState(false);
+  if (!path || errored) {
+    return (
+      <div style={{
+        width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#1e2436', color: 'var(--text-dim)', fontSize: '12px', textAlign: 'center', padding: '8px'
+      }}>
+        {title}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={`${TMDB_IMAGE_BASE}${path}`}
+      alt={title}
+      onError={() => setErrored(true)}
+      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+    />
+  );
+}
+
 function Home() {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,14 +55,11 @@ function Home() {
         <h1 style={{ fontSize: '28px' }}>Now Showing</h1>
         <input
           type="text"
+          className="input-field"
           placeholder="Search movies..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{
-            background: 'var(--card)', border: '1px solid var(--border)',
-            color: 'var(--text)', padding: '10px 16px', borderRadius: '8px',
-            fontSize: '14px', minWidth: '220px'
-          }}
+          style={{ minWidth: '220px', maxWidth: '280px' }}
         />
       </div>
 
@@ -50,21 +69,19 @@ function Home() {
         </p>
       ) : (
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '20px'
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '20px'
         }}>
           {filteredMovies.map(movie => (
             <Link to={`/movies/${movie.id}`} key={movie.id} style={{
               background: 'var(--card)', border: '1px solid var(--border)',
-              borderRadius: '10px', overflow: 'hidden', display: 'block'
-            }}>
-              <div style={{ aspectRatio: '2/3', background: '#1e2436' }}>
-                {movie.poster_path && (
-                  <img
-                    src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
-                    alt={movie.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                )}
+              borderRadius: '10px', overflow: 'hidden', display: 'block',
+              transition: 'transform 0.15s, border-color 0.15s'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.borderColor = '#3a4258'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+            >
+              <div style={{ aspectRatio: '2/3' }}>
+                <MoviePoster path={movie.poster_path} title={movie.title} />
               </div>
               <div style={{ padding: '12px' }}>
                 <div style={{ fontSize: '14px', fontWeight: 600 }}>{movie.title}</div>
