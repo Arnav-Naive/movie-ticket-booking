@@ -24,6 +24,7 @@ function Login() {
       });
       login(meRes.data, res.data.access, res.data.refresh);
       showToast(`Welcome back, ${meRes.data.username}!`, 'success');
+      sessionStorage.setItem('cinemax_login_intro', 'true');
       navigate('/');
     } catch (err) {
       setError('Login failed. Check your username and password.');

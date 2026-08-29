@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 
 function BookingSummary() {
@@ -7,11 +7,13 @@ function BookingSummary() {
   const location = useLocation();
   const navigate = useNavigate();
   const seatIds = location.state?.seatIds || [];
+  const expiresAt = location.state?.expiresAt;
 
   const [show, setShow] = useState(null);
   const [seats, setSeats] = useState([]);
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
+  const [remaining, setRemaining] = useState(null);
 
   useEffect(() => {
     if (seatIds.length === 0) {
@@ -26,6 +28,17 @@ function BookingSummary() {
       setSeats(seatsRes.data.filter(s => seatIds.includes(s.seat)));
     }).catch(() => setError('Unable to load booking details.'));
   }, [showId]);
+
+  useEffect(() => {
+    if (!expiresAt) return;
+    const tick = () => {
+      const diff = new Date(expiresAt) - new Date();
+      setRemaining(Math.max(0, Math.floor(diff / 1000)));
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
 
   const handleConfirm = async () => {
     setCreating(true);
@@ -47,10 +60,28 @@ function BookingSummary() {
   if (!show) return <div className="container" style={{ padding: '60px 0' }}>Loading...</div>;
 
   const total = show.price * seats.length;
+  const expired = remaining === 0;
+  const mins = remaining !== null ? Math.floor(remaining / 60) : null;
+  const secs = remaining !== null ? remaining % 60 : null;
 
   return (
     <div className="container" style={{ padding: '40px 0', maxWidth: '500px' }}>
-      <h1 style={{ marginBottom: '24px' }}>Booking Summary</h1>
+      <h1 style={{ marginBottom: '12px' }}>Booking Summary</h1>
+
+      {remaining !== null && !expired && (
+        <p style={{
+          color: remaining < 60 ? 'var(--red)' : 'var(--text-dim)',
+          fontSize: '14px', marginBottom: '20px'
+        }}>
+          Seats held for: {mins}:{secs.toString().padStart(2, '0')}
+        </p>
+      )}
+      {expired && (
+        <p style={{ color: 'var(--red)', fontSize: '14px', marginBottom: '20px' }}>
+          Your seat hold has expired. <Link to={`/seats/${showId}`} style={{ color: 'var(--red)', fontWeight: 600 }}>Select seats again</Link>
+        </p>
+      )}
+
       <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '24px' }}>
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontWeight: 600, fontSize: '18px' }}>{show.movie_title}</div>
@@ -79,11 +110,9 @@ function BookingSummary() {
 
       <button
         onClick={handleConfirm}
-        disabled={creating}
-        style={{
-          width: '100%', background: 'var(--red)', color: 'white', padding: '14px',
-          borderRadius: '8px', fontWeight: 600, border: 'none', marginTop: '24px', cursor: 'pointer'
-        }}
+        disabled={creating || expired}
+        className="btn-primary"
+        style={{ width: '100%', marginTop: '24px' }}
       >
         {creating ? 'Processing...' : 'Proceed to Payment'}
       </button>

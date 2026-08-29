@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLocationCtx } from '../context/LocationContext';
 
 function Navbar() {
   const { user, logout } = useAuth();
+  const { cities, selectedCity, setSelectedCity } = useLocationCtx();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -17,11 +19,23 @@ function Navbar() {
     <nav style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '16px 24px', borderBottom: '1px solid var(--border)',
-      background: 'var(--bg)', position: 'sticky', top: 0, zIndex: 50
+      background: 'var(--bg)', position: 'sticky', top: 0, zIndex: 50, gap: '16px', flexWrap: 'wrap'
     }}>
-      <Link to="/" style={{ fontSize: '22px', fontWeight: 700 }} onClick={() => setMenuOpen(false)}>
-        Cine<span style={{ color: 'var(--red)' }}>Max</span>
-      </Link>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+        <Link to="/" style={{ fontSize: '22px', fontWeight: 700 }} onClick={() => setMenuOpen(false)}>
+          Cine<span style={{ color: 'var(--red)' }}>Max</span>
+        </Link>
+        {cities.length > 0 && (
+          <select
+            value={selectedCity?.id || ''}
+            onChange={(e) => setSelectedCity(cities.find(c => c.id === Number(e.target.value)))}
+            className="input-field"
+            style={{ padding: '6px 10px', fontSize: '13px', width: 'auto' }}
+          >
+            {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        )}
+      </div>
 
       <div className="nav-links-desktop" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
         <Link to="/">Movies</Link>
@@ -43,10 +57,7 @@ function Navbar() {
       <button
         className="nav-hamburger"
         onClick={() => setMenuOpen(!menuOpen)}
-        style={{
-          background: 'transparent', border: 'none',
-          color: 'var(--text)', fontSize: '24px', cursor: 'pointer'
-        }}
+        style={{ background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '24px', cursor: 'pointer' }}
         aria-label="Toggle menu"
       >
         {menuOpen ? '✕' : '☰'}

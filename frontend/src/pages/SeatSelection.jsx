@@ -38,8 +38,8 @@ function SeatSelection() {
     setHolding(true);
     setError('');
     try {
-      await api.post(`/shows/${showId}/hold-seats/`, { seat_ids: selected });
-      navigate(`/summary/${showId}`, { state: { seatIds: selected } });
+      const res = await api.post(`/shows/${showId}/hold-seats/`, { seat_ids: selected });
+      navigate(`/summary/${showId}`, { state: { seatIds: selected, expiresAt: res.data.expires_at } });
     } catch (err) {
       setError(err.response?.data?.error || 'Unable to hold seats.');
     } finally {
