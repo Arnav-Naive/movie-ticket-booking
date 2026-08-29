@@ -38,8 +38,7 @@ function WebSmashIntro({ children }) {
     <div style={{ position: 'relative', minHeight: '70vh', overflow: 'hidden' }}>
       <div style={{
         opacity: phase === 'done' ? 1 : 0,
-        transform: phase === 'done' ? 'scale(1)' : 'scale(0.97)',
-        transition: 'opacity 0.35s ease-out, transform 0.35s ease-out',
+        transition: 'opacity 0.35s ease-out',
       }}>
         {children}
       </div>
