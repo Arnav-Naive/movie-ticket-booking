@@ -51,7 +51,7 @@ function WebSmashIntro({ children }) {
 
       {phase !== 'done' && (
         <div style={{
-          position: 'absolute', inset: 0, display: 'flex',
+          position: 'fixed', inset: 0, display: 'flex',
           alignItems: 'center', justifyContent: 'center',
           background: 'radial-gradient(circle at 50% 45%, #141a28 0%, #0b0f19 70%)',
           zIndex: 10,
