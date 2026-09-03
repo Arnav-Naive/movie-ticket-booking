@@ -1,14 +1,17 @@
-from django.shortcuts import render
-
 from rest_framework import generics
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
 from .serializers import RegisterSerializer, AdminUserSerializer
 from django.contrib.auth import get_user_model
 
+User = get_user_model()
+
+
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
+
 
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
@@ -21,12 +24,12 @@ class MeView(APIView):
             "is_staff": request.user.is_staff,
         })
 
+
 class AdminUserListView(generics.ListAPIView):
     serializer_class = AdminUserSerializer
     permission_classes = [IsAdminUser]
     queryset = User.objects.all().order_by('-date_joined')
 
-User = get_user_model()
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
