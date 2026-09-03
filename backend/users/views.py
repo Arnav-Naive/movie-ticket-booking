@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
 from .serializers import RegisterSerializer, AdminUserSerializer
+from django.contrib.auth import get_user_model
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
@@ -25,6 +26,7 @@ class AdminUserListView(generics.ListAPIView):
     permission_classes = [IsAdminUser]
     queryset = User.objects.all().order_by('-date_joined')
 
+User = get_user_model()
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
