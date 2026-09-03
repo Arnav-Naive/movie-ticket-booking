@@ -7,6 +7,8 @@ from bookings.models import Booking
 from shows.models import ShowSeat
 from .models import Payment
 from .razorpay_client import client
+from decimal import Decimal
+from wallet.models import Wallet, WalletTransaction
 
 
 @api_view(['POST'])
@@ -90,5 +92,12 @@ def verify_payment(request):
 
     show_seat_ids = booking.booking_seats.values_list('show_seat_id', flat=True)
     ShowSeat.objects.filter(id__in=show_seat_ids).update(status='BOOKED', hold_expires_at=None)
+
+    # Credit 5% of the amount as CineRP
+    wallet, _ = Wallet.objects.get_or_create(user=booking.user)
+    cinerp_earned = (booking.total_amount * Decimal('0.05')).quantize(Decimal('0.01'))
+    wallet.balance += cinerp_earned
+    wallet.save()
+    WalletTransaction.objects.create(wallet=wallet, booking=booking, amount=cinerp_earned, transaction_type='EARNED')
 
     return Response({"message": "Payment verified, booking confirmed", "booking_reference": booking.booking_reference})

@@ -8,12 +8,20 @@ function Payment() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [wallet, setWallet] = useState(null);
+  const [booking, setBooking] = useState(null);
 
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     document.body.appendChild(script);
-  }, []);
+
+    api.get('/wallet/').then(res => setWallet(res.data)).catch(() => {});
+    api.get('/bookings/my/').then(res => {
+      const b = res.data.find(x => x.id === Number(bookingId));
+      setBooking(b);
+    }).catch(() => {});
+  }, [bookingId]);
 
   const handlePay = async () => {
     setLoading(true);
@@ -22,12 +30,8 @@ function Payment() {
       const { order_id, amount, currency, key_id } = orderRes.data;
 
       const options = {
-        key: key_id,
-        amount: amount,
-        currency: currency,
-        order_id: order_id,
-        name: 'CineMax',
-        description: 'Movie ticket booking',
+        key: key_id, amount, currency, order_id,
+        name: 'CineMax', description: 'Movie ticket booking',
         handler: async function (response) {
           try {
             await api.post('/payments/verify/', {
@@ -44,21 +48,53 @@ function Payment() {
         theme: { color: '#e0263f' },
         modal: { ondismiss: () => setLoading(false) }
       };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      new window.Razorpay(options).open();
     } catch (err) {
       showToast(err.response?.data?.error || 'Unable to start payment.', 'error');
       setLoading(false);
     }
   };
 
+  const handlePayWithWallet = async () => {
+    setLoading(true);
+    try {
+      await api.post(`/bookings/${bookingId}/pay-with-wallet/`);
+      showToast('Booking confirmed using CineRP!', 'success');
+      navigate(`/ticket/${bookingId}`);
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Unable to pay with CineRP.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const canPayWithWallet = wallet && booking && Number(wallet.balance) >= Number(booking.total_amount);
+
   return (
     <div className="container" style={{ padding: '60px 0', textAlign: 'center' }}>
-      <h1 style={{ marginBottom: '20px' }}>Complete Payment</h1>
-      <button onClick={handlePay} disabled={loading} className="btn-primary" style={{ padding: '14px 40px', fontSize: '16px' }}>
-        {loading ? 'Opening payment...' : 'Pay Now'}
-      </button>
+      <h1 style={{ marginBottom: '12px' }}>Complete Payment</h1>
+      {wallet && (
+        <p style={{ color: 'var(--text-dim)', fontSize: '14px', marginBottom: '28px' }}>
+          Your CineRP balance: ₹{wallet.balance}
+        </p>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', alignItems: 'center' }}>
+        <button onClick={handlePay} disabled={loading} className="btn-primary" style={{ padding: '14px 40px', fontSize: '16px', width: '260px' }}>
+          {loading ? 'Please wait...' : 'Pay with Razorpay'}
+        </button>
+
+        {canPayWithWallet && (
+          <button onClick={handlePayWithWallet} disabled={loading} className="btn-ghost" style={{ padding: '14px 40px', fontSize: '16px', width: '260px' }}>
+            Pay with CineRP (₹{booking.total_amount})
+          </button>
+        )}
+        {wallet && booking && !canPayWithWallet && (
+          <p style={{ color: 'var(--text-dim)', fontSize: '12px' }}>
+            Need ₹{(Number(booking.total_amount) - Number(wallet.balance)).toFixed(2)} more CineRP to pay fully with points.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

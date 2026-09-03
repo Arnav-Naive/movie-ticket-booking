@@ -11,6 +11,8 @@ from .serializers import BookingSerializer
 import qrcode
 import io
 import base64
+from django.db.models import Sum
+from decimal import Decimal
 
 
 @api_view(['POST'])
@@ -157,4 +159,51 @@ def cancel_booking(request, booking_id):
         show_seat_ids = booking.booking_seats.values_list('show_seat_id', flat=True)
         ShowSeat.objects.filter(id__in=show_seat_ids).update(status='AVAILABLE', hold_expires_at=None)
 
+        from wallet.models import Wallet, WalletTransaction
+        wallet, _ = Wallet.objects.get_or_create(user=booking.user)
+
+        earned = booking.wallet_transactions.filter(transaction_type='EARNED').aggregate(total=Sum('amount'))['total'] or 0
+        if earned:
+            reverse_amount = min(earned, wallet.balance)
+            wallet.balance -= reverse_amount
+            WalletTransaction.objects.create(wallet=wallet, booking=booking, amount=reverse_amount, transaction_type='REVERSED')
+
+        spent = booking.wallet_transactions.filter(transaction_type='SPENT').aggregate(total=Sum('amount'))['total'] or 0
+        if spent:
+            wallet.balance += spent
+            WalletTransaction.objects.create(wallet=wallet, booking=booking, amount=spent, transaction_type='REFUNDED')
+
+        wallet.save()
+
     return Response({"message": "Booking cancelled successfully", "booking_reference": booking.booking_reference})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def pay_with_wallet(request, booking_id):
+    from wallet.models import Wallet, WalletTransaction
+
+    try:
+        booking = Booking.objects.get(id=booking_id, user=request.user)
+    except Booking.DoesNotExist:
+        return Response({"error": "Booking not found"}, status=404)
+
+    if booking.status != 'PENDING':
+        return Response({"error": "Booking is not in a payable state"}, status=400)
+
+    wallet, _ = Wallet.objects.get_or_create(user=request.user)
+    if wallet.balance < booking.total_amount:
+        return Response({"error": "Insufficient CineRP balance"}, status=400)
+
+    with transaction.atomic():
+        wallet.balance -= booking.total_amount
+        wallet.save()
+        WalletTransaction.objects.create(wallet=wallet, booking=booking, amount=booking.total_amount, transaction_type='SPENT')
+
+        booking.status = 'CONFIRMED'
+        booking.save()
+
+        show_seat_ids = booking.booking_seats.values_list('show_seat_id', flat=True)
+        ShowSeat.objects.filter(id__in=show_seat_ids).update(status='BOOKED', hold_expires_at=None)
+
+    return Response({"message": "Booking confirmed using CineRP", "booking_reference": booking.booking_reference})
