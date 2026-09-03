@@ -92,7 +92,7 @@ def live_search(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdminUser])
 def auto_import(request):
     tmdb_id = request.data.get('tmdb_id')
     if not tmdb_id:

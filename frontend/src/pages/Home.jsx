@@ -97,11 +97,7 @@ function Home() {
   }, [search]);
 
   const handleAutoImport = async (tmdbId) => {
-    if (!user) {
-      showToast('Log in to add new movies.', 'error');
-      navigate('/login');
-      return;
-    }
+    if (!user?.is_staff) return;
     setImportingId(tmdbId);
     try {
       const res = await api.post('/movies/auto-import/', { tmdb_id: tmdbId });
@@ -272,14 +268,20 @@ function Home() {
                       <div style={{ aspectRatio: '2/3' }}><MoviePoster path={movie.poster_path} title={movie.title} /></div>
                       <div style={{ padding: '14px' }}>
                         <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '10px' }}>{movie.title}</div>
-                        <button
-                          onClick={() => handleAutoImport(movie.tmdb_id)}
-                          disabled={importingId === movie.tmdb_id}
-                          className="btn-primary"
-                          style={{ width: '100%', padding: '8px', fontSize: '13px' }}
-                        >
-                          {importingId === movie.tmdb_id ? 'Adding...' : 'View & Add'}
-                        </button>
+                        {user?.is_staff ? (
+                          <button
+                            onClick={() => handleAutoImport(movie.tmdb_id)}
+                            disabled={importingId === movie.tmdb_id}
+                            className="btn-primary"
+                            style={{ width: '100%', padding: '8px', fontSize: '13px' }}
+                          >
+                            {importingId === movie.tmdb_id ? 'Adding...' : 'Add to CineMax'}
+                          </button>
+                        ) : (
+                          <div style={{ fontSize: '12px', color: 'var(--text-dim)', textAlign: 'center', padding: '8px' }}>
+                            Not yet available
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
