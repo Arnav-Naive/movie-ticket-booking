@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import CityViewSet, TheatreViewSet, ScreenViewSet, SeatViewSet, build_seat_layout
+from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 router.register('cities', CityViewSet)
