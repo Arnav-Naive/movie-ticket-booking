@@ -120,3 +120,49 @@ def release_seats(request, show_id):
         show_seats.update(status='AVAILABLE', hold_expires_at=None)
 
     return Response({"message": "Seats released successfully"})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def find_seats(request, show_id):
+    count = request.data.get('count')
+    if not isinstance(count, int) or count < 1:
+        return Response({"error": "count must be a positive integer"}, status=400)
+
+    now = timezone.now()
+    seats = ShowSeat.objects.filter(show_id=show_id).select_related('seat')
+
+    def is_available(s):
+        if s.status == 'AVAILABLE':
+            return True
+        return s.status == 'HELD' and s.hold_expires_at and s.hold_expires_at < now
+
+    rows = {}
+    for s in seats:
+        rows.setdefault(s.seat.row, []).append(s)
+
+    # Look for a contiguous available block within a single row
+    for row_seats in rows.values():
+        row_seats.sort(key=lambda s: s.seat.number)
+        block = []
+        for s in row_seats:
+            if is_available(s):
+                block.append(s)
+                if len(block) == count:
+                    return Response({
+                        "recommended_seats": [f"{b.seat.row}{b.seat.number}" for b in block],
+                        "show_seat_ids": [b.id for b in block],
+                    })
+            else:
+                block = []
+
+    # No contiguous block anywhere — fall back to any available seats
+    all_available = [s for row_seats in rows.values() for s in row_seats if is_available(s)]
+    if len(all_available) >= count:
+        chosen = all_available[:count]
+        return Response({
+            "message": f"No {count}-seat contiguous block available, showing best alternative",
+            "recommended_seats": [f"{c.seat.row}{c.seat.number}" for c in chosen],
+            "show_seat_ids": [c.id for c in chosen],
+        })
+
+    return Response({"error": "Not enough available seats for this show"}, status=400)

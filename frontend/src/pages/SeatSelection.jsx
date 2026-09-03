@@ -12,12 +12,12 @@ function SeatSelection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [holding, setHolding] = useState(false);
+  const [findCount, setFindCount] = useState(2);
+  const [finding, setFinding] = useState(false);
+  const [findMessage, setFindMessage] = useState('');
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+    if (!user) { navigate('/login'); return; }
     api.get(`/shows/${showId}/seats/`)
       .then(res => setSeats(res.data))
       .catch(() => setError('Unable to load seats.'))
@@ -27,10 +27,25 @@ function SeatSelection() {
   const toggleSeat = (seat) => {
     if (seat.status !== 'AVAILABLE') return;
     setSelected(prev =>
-      prev.includes(seat.seat)
-        ? prev.filter(s => s !== seat.seat)
-        : [...prev, seat.seat]
+      prev.includes(seat.seat) ? prev.filter(s => s !== seat.seat) : [...prev, seat.seat]
     );
+  };
+
+  const handleFindSeats = async () => {
+    setFinding(true);
+    setFindMessage('');
+    try {
+      const res = await api.post(`/shows/${showId}/find-seats/`, { count: findCount });
+      const matched = seats.filter(s => res.data.show_seat_ids.includes(s.id));
+      setSelected(matched.map(s => s.seat));
+      setFindMessage(res.data.message
+        ? `${res.data.message}: ${res.data.recommended_seats.join(', ')}`
+        : `Best seats found: ${res.data.recommended_seats.join(', ')}`);
+    } catch (err) {
+      setFindMessage(err.response?.data?.error || 'Unable to find seats.');
+    } finally {
+      setFinding(false);
+    }
   };
 
   const handleContinue = async () => {
@@ -54,8 +69,28 @@ function SeatSelection() {
   return (
     <div className="container" style={{ padding: '40px 0' }}>
       <h1 style={{ marginBottom: '8px' }}>Select Seats</h1>
+
       <div style={{
-        textAlign: 'center', color: 'var(--text-dim)', margin: '32px 0 16px',
+        display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center',
+        margin: '20px 0', flexWrap: 'wrap'
+      }}>
+        <span style={{ fontSize: '13px', color: 'var(--text-dim)' }}>Need seats together?</span>
+        <select
+          value={findCount}
+          onChange={(e) => setFindCount(Number(e.target.value))}
+          className="input-field"
+          style={{ width: 'auto', padding: '6px 10px' }}
+        >
+          {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} seat{n > 1 ? 's' : ''}</option>)}
+        </select>
+        <button onClick={handleFindSeats} disabled={finding} className="btn-ghost" style={{ padding: '8px 16px', fontSize: '13px' }}>
+          {finding ? 'Finding...' : 'Find Seats'}
+        </button>
+      </div>
+      {findMessage && <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '13px', marginBottom: '16px' }}>{findMessage}</p>}
+
+      <div style={{
+        textAlign: 'center', color: 'var(--text-dim)', margin: '16px 0 16px',
         borderBottom: '2px solid var(--border)', paddingBottom: '8px', fontSize: '13px'
       }}>
         SCREEN THIS WAY
