@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import WebSmashIntro from '../components/WebSmashIntro';
 import { useLocationCtx } from '../context/LocationContext';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w342';
 const BACKDROP_BASE = 'https://image.tmdb.org/t/p/w1280';
@@ -31,12 +33,19 @@ function isUpcoming(movie) {
 
 function Home() {
   const { selectedCity } = useLocationCtx();
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+
   const [movies, setMovies] = useState([]);
   const [theatres, setTheatres] = useState([]);
   const [showsToday, setShowsToday] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [liveResults, setLiveResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [importingId, setImportingId] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [languageFilter, setLanguageFilter] = useState('all');
   const [genreFilter, setGenreFilter] = useState('all');
@@ -71,10 +80,43 @@ function Home() {
     sessionStorage.setItem('cinemax_intro_seen', 'true');
   }, []);
 
+  // Debounced live search
+  useEffect(() => {
+    if (search.trim().length < 2) {
+      setLiveResults(null);
+      return;
+    }
+    setSearching(true);
+    const t = setTimeout(() => {
+      api.get(`/movies/live-search/?query=${encodeURIComponent(search)}`)
+        .then(res => setLiveResults(res.data))
+        .catch(() => setLiveResults({ local: [], remote: [] }))
+        .finally(() => setSearching(false));
+    }, 450);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const handleAutoImport = async (tmdbId) => {
+    if (!user) {
+      showToast('Log in to add new movies.', 'error');
+      navigate('/login');
+      return;
+    }
+    setImportingId(tmdbId);
+    try {
+      const res = await api.post('/movies/auto-import/', { tmdb_id: tmdbId });
+      navigate(`/movies/${res.data.id}`);
+    } catch (err) {
+      showToast('Unable to add this movie right now.', 'error');
+    } finally {
+      setImportingId(null);
+    }
+  };
+
   const featured = (movies.filter(m => !isUpcoming(m)).length > 0
     ? movies.filter(m => !isUpcoming(m))
     : movies
-  ).slice(0, 10);
+  ).slice(0, 5);
 
   useEffect(() => {
     if (featured.length < 2) return;
@@ -86,7 +128,6 @@ function Home() {
   const allLanguages = [...new Set(movies.map(m => m.language).filter(Boolean))];
 
   const filtered = movies.filter(m => {
-    if (search && !m.title.toLowerCase().includes(search.toLowerCase())) return false;
     if (statusFilter === 'now' && isUpcoming(m)) return false;
     if (statusFilter === 'upcoming' && !isUpcoming(m)) return false;
     if (languageFilter !== 'all' && m.language !== languageFilter) return false;
@@ -98,9 +139,7 @@ function Home() {
   });
 
   const cityTheatres = selectedCity ? theatres.filter(t => t.city === selectedCity.id) : theatres;
-
-  const showsCountByTheatre = (theatreName) =>
-    showsToday.filter(s => s.theatre_name === theatreName).length;
+  const showsCountByTheatre = (theatreName) => showsToday.filter(s => s.theatre_name === theatreName).length;
 
   if (loading) return <div className="container" style={{ padding: '60px 0' }}>Loading movies...</div>;
   if (error) return <div className="container" style={{ padding: '60px 0' }}>{error}</div>;
@@ -113,10 +152,11 @@ function Home() {
     whiteSpace: 'nowrap', flexShrink: 0
   });
 
+  const isSearchMode = liveResults !== null;
+
   const content = (
     <div>
-      {/* HERO CAROUSEL */}
-      {featured.length > 0 && (
+      {!isSearchMode && featured.length > 0 && (
         <div style={{ position: 'relative', height: '380px', overflow: 'hidden', background: 'var(--bg-alt)' }}>
           {featured.map((m, i) => (
             <div key={m.id} style={{
@@ -156,104 +196,163 @@ function Home() {
       )}
 
       <div className="container" style={{ padding: '32px 24px 40px' }}>
-        {/* FILTER BAR */}
-        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px' }}>
-          {[['all', 'All'], ['now', 'Now Showing'], ['upcoming', 'Upcoming']].map(([v, label]) => (
-            <button key={v} onClick={() => setStatusFilter(v)} style={pill(statusFilter === v)}>{label}</button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px' }}>
-          <button onClick={() => setLanguageFilter('all')} style={pill(languageFilter === 'all')}>All Languages</button>
-          {allLanguages.map(l => (
-            <button key={l} onClick={() => setLanguageFilter(l)} style={pill(languageFilter === l)}>{l.toUpperCase()}</button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '28px', paddingBottom: '4px' }}>
-          <button onClick={() => setGenreFilter('all')} style={pill(genreFilter === 'all')}>All Genres</button>
-          {allGenres.map(g => (
-            <button key={g} onClick={() => setGenreFilter(g)} style={pill(genreFilter === g)}>{g}</button>
-          ))}
-        </div>
+        {!isSearchMode && (
+          <>
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px' }}>
+              {[['all', 'All'], ['now', 'Now Showing'], ['upcoming', 'Upcoming']].map(([v, label]) => (
+                <button key={v} onClick={() => setStatusFilter(v)} style={pill(statusFilter === v)}>{label}</button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px' }}>
+              <button onClick={() => setLanguageFilter('all')} style={pill(languageFilter === 'all')}>All Languages</button>
+              {allLanguages.map(l => (
+                <button key={l} onClick={() => setLanguageFilter(l)} style={pill(languageFilter === l)}>{l.toUpperCase()}</button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '28px', paddingBottom: '4px' }}>
+              <button onClick={() => setGenreFilter('all')} style={pill(genreFilter === 'all')}>All Genres</button>
+              {allGenres.map(g => (
+                <button key={g} onClick={() => setGenreFilter(g)} style={pill(genreFilter === g)}>{g}</button>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* SEARCH + HEADING */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           marginBottom: '20px', flexWrap: 'wrap', gap: '16px'
         }}>
-          <h2 style={{ fontSize: '22px' }}>{filtered.length} movie{filtered.length !== 1 ? 's' : ''}</h2>
+          <h2 style={{ fontSize: '22px' }}>
+            {isSearchMode ? `Search results for "${search}"` : `${filtered.length} movie${filtered.length !== 1 ? 's' : ''}`}
+          </h2>
           <input
-            type="text" className="input-field" placeholder="Search movies..."
+            type="text" className="input-field" placeholder="Search any movie..."
             value={search} onChange={(e) => setSearch(e.target.value)}
             style={{ minWidth: '220px', maxWidth: '280px' }}
           />
         </div>
 
-        {/* MOVIE GRID */}
-        {filtered.length === 0 ? (
-          <p style={{ color: 'var(--text-dim)' }}>No movies match your filters.</p>
-        ) : (
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '22px', marginBottom: '48px'
-          }}>
-            {filtered.map(movie => (
-              <div key={movie.id} style={{
-                background: 'var(--card)', border: '1px solid var(--border)',
-                borderRadius: '12px', overflow: 'hidden', transition: 'transform 0.15s, border-color 0.15s'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = '#3a4258'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-              >
-                <Link to={`/movies/${movie.id}`} style={{ display: 'block', position: 'relative' }}>
-                  <div style={{ aspectRatio: '2/3' }}>
-                    <MoviePoster path={movie.poster_path} title={movie.title} />
-                  </div>
-                  <div style={{
-                    position: 'absolute', top: '10px', right: '10px',
-                    background: 'rgba(11,15,25,0.85)', border: '1px solid var(--border)',
-                    padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 600
+        {isSearchMode ? (
+          <div style={{ marginBottom: '48px' }}>
+            {searching && <p style={{ color: 'var(--text-dim)', marginBottom: '16px' }}>Searching...</p>}
+
+            {!searching && liveResults.local.length === 0 && liveResults.remote.length === 0 && (
+              <p style={{ color: 'var(--text-dim)' }}>No movies found.</p>
+            )}
+
+            {liveResults.local.length > 0 && (
+              <div style={{
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '22px', marginBottom: '28px'
+              }}>
+                {liveResults.local.map(movie => (
+                  <Link to={`/movies/${movie.id}`} key={movie.id} style={{
+                    background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', display: 'block'
                   }}>
-                    ★ {movie.rating}
-                  </div>
-                </Link>
-                <div style={{ padding: '14px' }}>
-                  <Link to={`/movies/${movie.id}`}>
-                    <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>{movie.title}</div>
+                    <div style={{ aspectRatio: '2/3' }}><MoviePoster path={movie.poster_path} title={movie.title} /></div>
+                    <div style={{ padding: '14px' }}>
+                      <div style={{ fontSize: '15px', fontWeight: 600 }}>{movie.title}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-dim)' }}>{movie.genre}</div>
+                    </div>
                   </Link>
-                  <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginBottom: '12px' }}>
-                    {movie.genre} · {movie.language?.toUpperCase()}
-                  </div>
-                  <Link to={`/movies/${movie.id}`} className="btn-primary" style={{
-                    textDecoration: 'none', display: 'block', textAlign: 'center', padding: '8px', fontSize: '13px'
-                  }}>
-                    Book Tickets
-                  </Link>
+                ))}
+              </div>
+            )}
+
+            {liveResults.remote.length > 0 && (
+              <div>
+                <div style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '12px' }}>
+                  MORE FROM TMDB — not yet on CineMax
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '22px' }}>
+                  {liveResults.remote.map(movie => (
+                    <div key={movie.tmdb_id} style={{
+                      background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden'
+                    }}>
+                      <div style={{ aspectRatio: '2/3' }}><MoviePoster path={movie.poster_path} title={movie.title} /></div>
+                      <div style={{ padding: '14px' }}>
+                        <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '10px' }}>{movie.title}</div>
+                        <button
+                          onClick={() => handleAutoImport(movie.tmdb_id)}
+                          disabled={importingId === movie.tmdb_id}
+                          className="btn-primary"
+                          style={{ width: '100%', padding: '8px', fontSize: '13px' }}
+                        >
+                          {importingId === movie.tmdb_id ? 'Adding...' : 'View & Add'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
           </div>
-        )}
-
-        {/* CINEMA STRIP */}
-        {cityTheatres.length > 0 && (
-          <div>
-            <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>
-              Cinemas near {selectedCity?.name || 'you'}
-            </h2>
-            <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
-              {cityTheatres.map(t => (
-                <div key={t.id} style={{
-                  background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px',
-                  padding: '18px', minWidth: '220px', flexShrink: 0
-                }}>
-                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>{t.name}</div>
-                  <div style={{ color: 'var(--text-dim)', fontSize: '13px', marginBottom: '10px' }}>{t.address}</div>
-                  <div style={{ fontSize: '12px', color: showsCountByTheatre(t.name) > 0 ? '#2ecc71' : 'var(--text-dim)' }}>
-                    {showsCountByTheatre(t.name)} show(s) today
+        ) : (
+          <>
+            {filtered.length === 0 ? (
+              <p style={{ color: 'var(--text-dim)' }}>No movies match your filters.</p>
+            ) : (
+              <div style={{
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '22px', marginBottom: '48px'
+              }}>
+                {filtered.map(movie => (
+                  <div key={movie.id} style={{
+                    background: 'var(--card)', border: '1px solid var(--border)',
+                    borderRadius: '12px', overflow: 'hidden', transition: 'transform 0.15s, border-color 0.15s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = '#3a4258'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+                  >
+                    <Link to={`/movies/${movie.id}`} style={{ display: 'block', position: 'relative' }}>
+                      <div style={{ aspectRatio: '2/3' }}>
+                        <MoviePoster path={movie.poster_path} title={movie.title} />
+                      </div>
+                      <div style={{
+                        position: 'absolute', top: '10px', right: '10px',
+                        background: 'rgba(11,15,25,0.85)', border: '1px solid var(--border)',
+                        padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 600
+                      }}>
+                        ★ {movie.rating}
+                      </div>
+                    </Link>
+                    <div style={{ padding: '14px' }}>
+                      <Link to={`/movies/${movie.id}`}>
+                        <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>{movie.title}</div>
+                      </Link>
+                      <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginBottom: '12px' }}>
+                        {movie.genre} · {movie.language?.toUpperCase()}
+                      </div>
+                      <Link to={`/movies/${movie.id}`} className="btn-primary" style={{
+                        textDecoration: 'none', display: 'block', textAlign: 'center', padding: '8px', fontSize: '13px'
+                      }}>
+                        Book Tickets
+                      </Link>
+                    </div>
                   </div>
+                ))}
+              </div>
+            )}
+
+            {cityTheatres.length > 0 && (
+              <div>
+                <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>Cinemas near {selectedCity?.name || 'you'}</h2>
+                <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
+                  {cityTheatres.map(t => (
+                    <div key={t.id} style={{
+                      background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px',
+                      padding: '18px', minWidth: '220px', flexShrink: 0
+                    }}>
+                      <div style={{ fontWeight: 600, marginBottom: '4px' }}>{t.name}</div>
+                      <div style={{ color: 'var(--text-dim)', fontSize: '13px', marginBottom: '10px' }}>{t.address}</div>
+                      <div style={{ fontSize: '12px', color: showsCountByTheatre(t.name) > 0 ? '#2ecc71' : 'var(--text-dim)' }}>
+                        {showsCountByTheatre(t.name)} show(s) today
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -60,3 +60,63 @@ class MovieDetailView(generics.RetrieveAPIView):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
     permission_classes = [AllowAny]
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def live_search(request):
+    query = request.GET.get('query', '').strip()
+    if len(query) < 2:
+        return Response({'local': [], 'remote': []})
+
+    local_matches = Movie.objects.filter(title__icontains=query)
+    local_serialized = MovieSerializer(local_matches, many=True).data
+    local_tmdb_ids = set(m.tmdb_id for m in local_matches)
+
+    remote_results = []
+    try:
+        tmdb_results = search_movies(query)
+        for r in tmdb_results[:10]:
+            if r['id'] in local_tmdb_ids:
+                continue
+            remote_results.append({
+                'tmdb_id': r['id'],
+                'title': r.get('title'),
+                'poster_path': r.get('poster_path'),
+                'release_date': r.get('release_date'),
+                'rating': r.get('vote_average'),
+            })
+    except Exception:
+        pass  # TMDB hiccup — still return whatever local results we have
+
+    return Response({'local': local_serialized, 'remote': remote_results})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def auto_import(request):
+    tmdb_id = request.data.get('tmdb_id')
+    if not tmdb_id:
+        return Response({"error": "tmdb_id is required"}, status=400)
+
+    existing = Movie.objects.filter(tmdb_id=tmdb_id).first()
+    if existing:
+        return Response(MovieSerializer(existing).data)
+
+    data = get_movie_details(tmdb_id)
+    cast, trailer_key = extract_cast_and_trailer(data)
+
+    movie = Movie.objects.create(
+        tmdb_id=data['id'],
+        title=data['title'],
+        overview=data.get('overview', ''),
+        poster_path=data.get('poster_path'),
+        backdrop_path=data.get('backdrop_path'),
+        release_date=data.get('release_date') or None,
+        runtime=data.get('runtime'),
+        language=data.get('original_language'),
+        rating=data.get('vote_average'),
+        genre=', '.join([g['name'] for g in data.get('genres', [])]),
+        cast=cast,
+        trailer_key=trailer_key,
+    )
+    return Response(MovieSerializer(movie).data, status=201)
