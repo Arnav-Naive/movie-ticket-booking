@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from .models import Movie
 from .serializers import MovieSerializer
 from .tmdb_service import search_movies, get_movie_details, extract_cast_and_trailer
+from cinemas.views import IsAdminOrReadOnly
 
 
 @api_view(['GET'])
@@ -56,10 +57,10 @@ class MovieListView(generics.ListAPIView):
     permission_classes = [AllowAny]
 
 
-class MovieDetailView(generics.RetrieveAPIView):
+class MovieDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminOrReadOnly]
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

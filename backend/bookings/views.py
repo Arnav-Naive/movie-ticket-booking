@@ -207,3 +207,17 @@ def pay_with_wallet(request, booking_id):
         ShowSeat.objects.filter(id__in=show_seat_ids).update(status='BOOKED', hold_expires_at=None)
 
     return Response({"message": "Booking confirmed using CineRP", "booking_reference": booking.booking_reference})
+
+class AdminBookingsView(generics.ListAPIView):
+    serializer_class = BookingSerializer
+    permission_classes = [IsAdminUser]
+
+    def get_queryset(self):
+        queryset = Booking.objects.all().order_by('-created_at')
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(booking_reference__icontains=search)
+        return queryset
