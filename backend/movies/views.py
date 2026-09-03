@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAdminUser, AllowAny
 from rest_framework.response import Response
 from .models import Movie
 from .serializers import MovieSerializer
-from .tmdb_service import search_movies, get_movie_details
+from .tmdb_service import search_movies, get_movie_details, extract_cast_and_trailer
 
 
 @api_view(['GET'])
@@ -30,6 +30,7 @@ def tmdb_import(request):
         return Response({"error": "Movie already imported"}, status=400)
 
     data = get_movie_details(tmdb_id)
+    cast, trailer_key = extract_cast_and_trailer(data)
 
     movie = Movie.objects.create(
         tmdb_id=data['id'],
@@ -42,6 +43,8 @@ def tmdb_import(request):
         language=data.get('original_language'),
         rating=data.get('vote_average'),
         genre=', '.join([g['name'] for g in data.get('genres', [])]),
+        cast=cast,
+        trailer_key=trailer_key,
     )
     serializer = MovieSerializer(movie)
     return Response(serializer.data, status=201)
