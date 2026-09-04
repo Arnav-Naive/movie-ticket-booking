@@ -11,19 +11,36 @@ const BACKDROP_BASE = 'https://image.tmdb.org/t/p/w1280';
 
 function MoviePoster({ path, title }) {
   const [errored, setErrored] = useState(false);
+  const [loading, setLoading] = useState(true);
+
   if (!path || errored) {
     return (
       <div style={{
         width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: '#1e2436', color: 'var(--text-dim)', fontSize: '12px', textAlign: 'center', padding: '8px'
+        background: 'var(--bg-card)', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center', padding: 'var(--space-sm)'
       }}>
         {title}
       </div>
     );
   }
+
   return (
-    <img src={`${POSTER_BASE}${path}`} alt={title} onError={() => setErrored(true)}
-      style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      {loading && <div className="skeleton" style={{ position: 'absolute', inset: 0 }}></div>}
+      <img 
+        src={`${POSTER_BASE}${path}`} 
+        alt={title} 
+        onLoad={() => setLoading(false)}
+        onError={() => setErrored(true)}
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          objectFit: 'cover',
+          opacity: loading ? 0 : 1,
+          transition: 'opacity var(--transition-base)'
+        }} 
+      />
+    </div>
   );
 }
 
@@ -137,15 +154,28 @@ function Home() {
   const cityTheatres = selectedCity ? theatres.filter(t => t.city === selectedCity.id) : theatres;
   const showsCountByTheatre = (theatreName) => showsToday.filter(s => s.theatre_name === theatreName).length;
 
-  if (loading) return <div className="container" style={{ padding: '60px 0' }}>Loading movies...</div>;
-  if (error) return <div className="container" style={{ padding: '60px 0' }}>{error}</div>;
+  if (loading) return (
+    <div className="container" style={{ padding: 'var(--space-2xl) 0', display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+      <div className="skeleton" style={{ height: '380px', width: '100%', borderRadius: 'var(--radius-lg)' }}></div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--space-lg)' }}>
+        {[1,2,3,4,5].map(i => <div key={i} className="skeleton" style={{ height: '340px', borderRadius: 'var(--radius-lg)' }}></div>)}
+      </div>
+    </div>
+  );
+  if (error) return <div className="container" style={{ padding: 'var(--space-2xl) 0', color: 'var(--accent-red)', textAlign: 'center' }}>{error}</div>;
 
-  const pill = (active) => ({
-    padding: '7px 16px', borderRadius: '999px', fontSize: '13px', cursor: 'pointer',
-    border: `1px solid ${active ? 'var(--red)' : 'var(--border)'}`,
-    background: active ? 'var(--red)' : 'var(--card)',
-    color: active ? 'white' : 'var(--text-dim)',
-    whiteSpace: 'nowrap', flexShrink: 0
+  const pillStyle = (active) => ({
+    padding: '8px var(--space-md)', 
+    borderRadius: 'var(--radius-full)', 
+    fontSize: '13px', 
+    fontWeight: 500,
+    cursor: 'pointer',
+    border: `1px solid ${active ? 'var(--accent-red)' : 'var(--border-subtle)'}`,
+    background: active ? 'var(--accent-red)' : 'var(--bg-card)',
+    color: active ? '#fff' : 'var(--text-muted)',
+    whiteSpace: 'nowrap', 
+    flexShrink: 0,
+    transition: 'all var(--transition-fast)'
   });
 
   const isSearchMode = liveResults !== null;
@@ -153,37 +183,51 @@ function Home() {
   const content = (
     <div>
       {!isSearchMode && featured.length > 0 && (
-        <div style={{ position: 'relative', height: '380px', overflow: 'hidden', background: 'var(--bg-alt)' }}>
+        <div style={{ position: 'relative', height: '440px', overflow: 'hidden', background: 'var(--bg-surface)' }}>
           {featured.map((m, i) => (
             <div key={m.id} style={{
               position: 'absolute', inset: 0, opacity: i === slide ? 1 : 0,
-              transition: 'opacity 0.6s ease',
-              backgroundImage: `linear-gradient(90deg, rgba(11,15,25,0.95) 20%, rgba(11,15,25,0.3) 70%), url(${m.backdrop_path ? BACKDROP_BASE + m.backdrop_path : (m.poster_path ? POSTER_BASE + m.poster_path : '')})`,
+              transition: 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+              backgroundImage: `linear-gradient(90deg, rgba(11,15,25,1) 10%, rgba(11,15,25,0.6) 50%, rgba(11,15,25,0) 100%), linear-gradient(0deg, rgba(11,15,25,1) 0%, rgba(11,15,25,0) 30%), url(${m.backdrop_path ? BACKDROP_BASE + m.backdrop_path : (m.poster_path ? POSTER_BASE + m.poster_path : '')})`,
               backgroundSize: 'cover', backgroundPosition: 'center',
               display: 'flex', alignItems: 'center'
             }}>
               <div className="container">
-                <div style={{ maxWidth: '480px' }}>
-                  <div style={{ color: 'var(--red)', fontWeight: 700, fontSize: '13px', letterSpacing: '1px', marginBottom: '8px' }}>
-                    {isUpcoming(m) ? 'COMING SOON' : 'FEATURED'}
+                <div style={{ maxWidth: '520px', padding: 'var(--space-lg) 0' }}>
+                  <div style={{ 
+                    color: 'var(--accent-red)', fontWeight: 700, fontSize: '13px', 
+                    letterSpacing: '1.5px', marginBottom: 'var(--space-sm)', textTransform: 'uppercase'
+                  }}>
+                    {isUpcoming(m) ? 'Coming Soon' : 'Featured Premiere'}
                   </div>
-                  <h1 style={{ fontSize: '36px', marginBottom: '10px' }}>{m.title}</h1>
-                  <div style={{ color: 'var(--text-dim)', fontSize: '14px', marginBottom: '20px' }}>
-                    ★ {m.rating} · {m.genre}
+                  <h1 style={{ fontSize: '42px', fontWeight: 800, marginBottom: 'var(--space-sm)', lineHeight: 1.1 }}>
+                    {m.title}
+                  </h1>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '15px', marginBottom: 'var(--space-lg)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px', color: '#f39c12', fontWeight: 600 }}>
+                      ★ {m.rating}
+                    </span> 
+                    <span>&bull;</span>
+                    <span>{m.genre}</span>
                   </div>
-                  <Link to={`/movies/${m.id}`} className="btn-primary" style={{ textDecoration: 'none', display: 'inline-block' }}>
-                    Book Now
+                  <Link to={`/movies/${m.id}`} className="btn btn-primary" style={{ padding: '14px 32px', fontSize: '16px' }}>
+                    Book Tickets
                   </Link>
                 </div>
               </div>
             </div>
           ))}
           {featured.length > 1 && (
-            <div style={{ position: 'absolute', bottom: '16px', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '8px' }}>
+            <div style={{ position: 'absolute', bottom: 'var(--space-lg)', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 'var(--space-sm)' }}>
               {featured.map((_, i) => (
-                <button key={i} onClick={() => setSlide(i)} style={{
-                  width: '8px', height: '8px', borderRadius: '50%', border: 'none', cursor: 'pointer',
-                  background: i === slide ? 'var(--red)' : 'rgba(255,255,255,0.3)'
+                <button key={i} onClick={() => setSlide(i)} aria-label={`Go to slide ${i+1}`} style={{
+                  width: i === slide ? '24px' : '8px', 
+                  height: '8px', 
+                  borderRadius: 'var(--radius-full)', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                  background: i === slide ? 'var(--accent-red)' : 'rgba(255,255,255,0.3)',
+                  transition: 'all var(--transition-base)'
                 }} />
               ))}
             </div>
@@ -191,64 +235,74 @@ function Home() {
         </div>
       )}
 
-      <div className="container" style={{ padding: '32px 24px 40px' }}>
+      <div className="container" style={{ padding: 'var(--space-xl) var(--space-lg) var(--space-2xl)' }}>
         {!isSearchMode && (
-          <>
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px' }}>
-              {[['all', 'All'], ['now', 'Now Showing'], ['upcoming', 'Upcoming']].map(([v, label]) => (
-                <button key={v} onClick={() => setStatusFilter(v)} style={pill(statusFilter === v)}>{label}</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', marginBottom: 'var(--space-xl)' }}>
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+              {[['all', 'All Movies'], ['now', 'Now Showing'], ['upcoming', 'Coming Soon']].map(([v, label]) => (
+                <button key={v} onClick={() => setStatusFilter(v)} style={pillStyle(statusFilter === v)}>{label}</button>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px' }}>
-              <button onClick={() => setLanguageFilter('all')} style={pill(languageFilter === 'all')}>All Languages</button>
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+              <button onClick={() => setLanguageFilter('all')} style={pillStyle(languageFilter === 'all')}>All Languages</button>
               {allLanguages.map(l => (
-                <button key={l} onClick={() => setLanguageFilter(l)} style={pill(languageFilter === l)}>{l.toUpperCase()}</button>
+                <button key={l} onClick={() => setLanguageFilter(l)} style={pillStyle(languageFilter === l)}>{l.toUpperCase()}</button>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginBottom: '28px', paddingBottom: '4px' }}>
-              <button onClick={() => setGenreFilter('all')} style={pill(genreFilter === 'all')}>All Genres</button>
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+              <button onClick={() => setGenreFilter('all')} style={pillStyle(genreFilter === 'all')}>All Genres</button>
               {allGenres.map(g => (
-                <button key={g} onClick={() => setGenreFilter(g)} style={pill(genreFilter === g)}>{g}</button>
+                <button key={g} onClick={() => setGenreFilter(g)} style={pillStyle(genreFilter === g)}>{g}</button>
               ))}
             </div>
-          </>
+          </div>
         )}
 
         {/* SEARCH + HEADING */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginBottom: '20px', flexWrap: 'wrap', gap: '16px'
+          marginBottom: 'var(--space-lg)', flexWrap: 'wrap', gap: 'var(--space-md)'
         }}>
-          <h2 style={{ fontSize: '22px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 700 }}>
             {isSearchMode ? `Search results for "${search}"` : `${filtered.length} movie${filtered.length !== 1 ? 's' : ''}`}
           </h2>
           <input
-            type="text" className="input-field" placeholder="Search any movie..."
-            value={search} onChange={(e) => setSearch(e.target.value)}
-            style={{ minWidth: '220px', maxWidth: '280px' }}
+            type="text" 
+            className="input-field" 
+            placeholder="Search movies..."
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ minWidth: '220px', maxWidth: '300px' }}
           />
         </div>
 
         {isSearchMode ? (
-          <div style={{ marginBottom: '48px' }}>
-            {searching && <p style={{ color: 'var(--text-dim)', marginBottom: '16px' }}>Searching...</p>}
+          <div style={{ marginBottom: 'var(--space-2xl)' }}>
+            {searching && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--space-lg)' }}>
+                {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: '340px', borderRadius: 'var(--radius-lg)' }}></div>)}
+              </div>
+            )}
 
             {!searching && liveResults.local.length === 0 && liveResults.remote.length === 0 && (
-              <p style={{ color: 'var(--text-dim)' }}>No movies found.</p>
+              <div style={{ textAlign: 'center', padding: 'var(--space-2xl) 0', color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: '48px', marginBottom: 'var(--space-md)' }}>🔍</div>
+                <p>No movies found for "{search}"</p>
+              </div>
             )}
 
             {liveResults.local.length > 0 && (
               <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '22px', marginBottom: '28px'
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--space-lg)', marginBottom: 'var(--space-xl)'
               }}>
                 {liveResults.local.map(movie => (
-                  <Link to={`/movies/${movie.id}`} key={movie.id} style={{
-                    background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', display: 'block'
-                  }}>
-                    <div style={{ aspectRatio: '2/3' }}><MoviePoster path={movie.poster_path} title={movie.title} /></div>
-                    <div style={{ padding: '14px' }}>
-                      <div style={{ fontSize: '15px', fontWeight: 600 }}>{movie.title}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-dim)' }}>{movie.genre}</div>
+                  <Link to={`/movies/${movie.id}`} key={movie.id} className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <div style={{ aspectRatio: '2/3', overflow: 'hidden' }}>
+                      <MoviePoster path={movie.poster_path} title={movie.title} />
+                    </div>
+                    <div style={{ padding: 'var(--space-md)', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: 'var(--space-xs)', color: 'var(--text-main)' }}>{movie.title}</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: 'auto' }}>{movie.genre}</div>
                     </div>
                   </Link>
                 ))}
@@ -257,29 +311,31 @@ function Home() {
 
             {liveResults.remote.length > 0 && (
               <div>
-                <div style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '12px' }}>
-                  MORE FROM TMDB — not yet on CineMax
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }}></span>
+                  MORE FROM TMDB (Not yet in CineMax)
+                  <span style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }}></span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '22px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--space-lg)' }}>
                   {liveResults.remote.map(movie => (
-                    <div key={movie.tmdb_id} style={{
-                      background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden'
-                    }}>
-                      <div style={{ aspectRatio: '2/3' }}><MoviePoster path={movie.poster_path} title={movie.title} /></div>
-                      <div style={{ padding: '14px' }}>
-                        <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '10px' }}>{movie.title}</div>
+                    <div key={movie.tmdb_id} className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                      <div style={{ aspectRatio: '2/3', overflow: 'hidden' }}>
+                        <MoviePoster path={movie.poster_path} title={movie.title} />
+                      </div>
+                      <div style={{ padding: 'var(--space-md)', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: 'var(--space-md)' }}>{movie.title}</div>
                         {user?.is_staff ? (
                           <button
                             onClick={() => handleAutoImport(movie.tmdb_id)}
                             disabled={importingId === movie.tmdb_id}
-                            className="btn-primary"
-                            style={{ width: '100%', padding: '8px', fontSize: '13px' }}
+                            className="btn btn-primary"
+                            style={{ width: '100%', marginTop: 'auto' }}
                           >
                             {importingId === movie.tmdb_id ? 'Adding...' : 'Add to CineMax'}
                           </button>
                         ) : (
-                          <div style={{ fontSize: '12px', color: 'var(--text-dim)', textAlign: 'center', padding: '8px' }}>
-                            Not yet available
+                          <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '8px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', marginTop: 'auto' }}>
+                            Not available
                           </div>
                         )}
                       </div>
@@ -292,41 +348,41 @@ function Home() {
         ) : (
           <>
             {filtered.length === 0 ? (
-              <p style={{ color: 'var(--text-dim)' }}>No movies match your filters.</p>
+              <div style={{ textAlign: 'center', padding: 'var(--space-2xl) 0', color: 'var(--text-muted)' }}>
+                <p>No movies match your selected filters.</p>
+                <button onClick={() => { setStatusFilter('all'); setGenreFilter('all'); setLanguageFilter('all'); }} className="btn btn-ghost" style={{ marginTop: 'var(--space-md)' }}>
+                  Clear Filters
+                </button>
+              </div>
             ) : (
               <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '22px', marginBottom: '48px'
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--space-lg)', marginBottom: 'var(--space-2xl)'
               }}>
                 {filtered.map(movie => (
-                  <div key={movie.id} style={{
-                    background: 'var(--card)', border: '1px solid var(--border)',
-                    borderRadius: '12px', overflow: 'hidden', transition: 'transform 0.15s, border-color 0.15s'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = '#3a4258'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-                  >
-                    <Link to={`/movies/${movie.id}`} style={{ display: 'block', position: 'relative' }}>
-                      <div style={{ aspectRatio: '2/3' }}>
+                  <div key={movie.id} className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <Link to={`/movies/${movie.id}`} style={{ display: 'block', position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ aspectRatio: '2/3', transition: 'transform var(--transition-base)' }} className="poster-wrapper">
                         <MoviePoster path={movie.poster_path} title={movie.title} />
                       </div>
                       <div style={{
-                        position: 'absolute', top: '10px', right: '10px',
-                        background: 'rgba(11,15,25,0.85)', border: '1px solid var(--border)',
-                        padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 600
+                        position: 'absolute', top: '12px', right: '12px',
+                        background: 'rgba(11,15,25,0.85)', backdropFilter: 'blur(4px)',
+                        border: '1px solid var(--border-subtle)',
+                        padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 700,
+                        color: '#f39c12', display: 'flex', alignItems: 'center', gap: '4px',
+                        boxShadow: 'var(--shadow-card)'
                       }}>
                         ★ {movie.rating}
                       </div>
                     </Link>
-                    <div style={{ padding: '14px' }}>
-                      <Link to={`/movies/${movie.id}`}>
-                        <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>{movie.title}</div>
+                    <div style={{ padding: 'var(--space-md)', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      <Link to={`/movies/${movie.id}`} style={{ textDecoration: 'none' }}>
+                        <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: 'var(--space-xs)', color: 'var(--text-main)', lineHeight: 1.3 }}>{movie.title}</div>
                       </Link>
-                      <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginBottom: '12px' }}>
-                        {movie.genre} · {movie.language?.toUpperCase()}
+                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: 'var(--space-md)' }}>
+                        {movie.genre} &bull; {movie.language?.toUpperCase()}
                       </div>
-                      <Link to={`/movies/${movie.id}`} className="btn-primary" style={{
-                        textDecoration: 'none', display: 'block', textAlign: 'center', padding: '8px', fontSize: '13px'
-                      }}>
+                      <Link to={`/movies/${movie.id}`} className="btn btn-primary" style={{ width: '100%', marginTop: 'auto' }}>
                         Book Tickets
                       </Link>
                     </div>
@@ -337,17 +393,18 @@ function Home() {
 
             {cityTheatres.length > 0 && (
               <div>
-                <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>Cinemas near {selectedCity?.name || 'you'}</h2>
-                <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
+                <h2 style={{ fontSize: '22px', fontWeight: 700, marginBottom: 'var(--space-md)' }}>Cinemas near {selectedCity?.name || 'you'}</h2>
+                <div style={{ display: 'flex', gap: 'var(--space-md)', overflowX: 'auto', paddingBottom: 'var(--space-md)', scrollbarWidth: 'none' }}>
                   {cityTheatres.map(t => (
-                    <div key={t.id} style={{
-                      background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px',
-                      padding: '18px', minWidth: '220px', flexShrink: 0
-                    }}>
-                      <div style={{ fontWeight: 600, marginBottom: '4px' }}>{t.name}</div>
-                      <div style={{ color: 'var(--text-dim)', fontSize: '13px', marginBottom: '10px' }}>{t.address}</div>
-                      <div style={{ fontSize: '12px', color: showsCountByTheatre(t.name) > 0 ? '#2ecc71' : 'var(--text-dim)' }}>
-                        {showsCountByTheatre(t.name)} show(s) today
+                    <div key={t.id} className="card" style={{ padding: 'var(--space-md)', minWidth: '260px', flexShrink: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: '16px', marginBottom: 'var(--space-xs)' }}>{t.name}</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: 'var(--space-md)', lineHeight: 1.4 }}>{t.address}</div>
+                      <div style={{ 
+                        fontSize: '13px', fontWeight: 500,
+                        color: showsCountByTheatre(t.name) > 0 ? 'var(--success)' : 'var(--text-muted)',
+                        background: 'var(--bg-surface)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', display: 'inline-block'
+                      }}>
+                        {showsCountByTheatre(t.name)} show{showsCountByTheatre(t.name) !== 1 ? 's' : ''} today
                       </div>
                     </div>
                   ))}

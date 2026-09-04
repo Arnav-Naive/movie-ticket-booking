@@ -10,17 +10,22 @@ function Payment() {
   const [loading, setLoading] = useState(false);
   const [wallet, setWallet] = useState(null);
   const [booking, setBooking] = useState(null);
+  const [initLoading, setInitLoading] = useState(true);
 
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     document.body.appendChild(script);
 
-    api.get('/wallet/').then(res => setWallet(res.data)).catch(() => {});
-    api.get('/bookings/my/').then(res => {
-      const b = res.data.find(x => x.id === Number(bookingId));
+    Promise.all([
+      api.get('/wallet/'),
+      api.get('/bookings/my/')
+    ]).then(([walletRes, bookingsRes]) => {
+      setWallet(walletRes.data);
+      const b = bookingsRes.data.find(x => x.id === Number(bookingId));
       setBooking(b);
-    }).catch(() => {});
+    }).catch(() => {})
+    .finally(() => setInitLoading(false));
   }, [bookingId]);
 
   const handlePay = async () => {
@@ -68,32 +73,55 @@ function Payment() {
     }
   };
 
+  if (initLoading) return (
+    <div className="container" style={{ padding: 'var(--space-2xl) 0', textAlign: 'center' }}>
+      <div className="skeleton" style={{ width: '250px', height: '40px', margin: '0 auto var(--space-xl)' }}></div>
+      <div className="skeleton" style={{ width: '400px', height: '250px', margin: '0 auto', borderRadius: 'var(--radius-lg)' }}></div>
+    </div>
+  );
+
   const canPayWithWallet = wallet && booking && Number(wallet.balance) >= Number(booking.total_amount);
 
   return (
-    <div className="container" style={{ padding: '60px 0', textAlign: 'center' }}>
-      <h1 style={{ marginBottom: '12px' }}>Complete Payment</h1>
-      {wallet && (
-        <p style={{ color: 'var(--text-dim)', fontSize: '14px', marginBottom: '28px' }}>
-          Your CineRP balance: ₹{wallet.balance}
-        </p>
-      )}
+    <div className="container" style={{ padding: 'var(--space-2xl) 0', maxWidth: '500px' }}>
+      <div className="card" style={{ padding: 'var(--space-2xl) var(--space-xl)', textAlign: 'center' }}>
+        
+        <div style={{ width: '64px', height: '64px', borderRadius: 'var(--radius-full)', background: 'rgba(224, 38, 63, 0.1)', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto var(--space-md)' }}>
+          💳
+        </div>
+        
+        <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: 'var(--space-sm)' }}>Complete Payment</h1>
+        
+        {booking && (
+          <div style={{ fontSize: '36px', fontWeight: 800, color: 'var(--text-main)', marginBottom: 'var(--space-xl)' }}>
+            ₹{Number(booking.total_amount).toFixed(2)}
+          </div>
+        )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', alignItems: 'center' }}>
-        <button onClick={handlePay} disabled={loading} className="btn-primary" style={{ padding: '14px 40px', fontSize: '16px', width: '260px' }}>
-          {loading ? 'Please wait...' : 'Pay with Razorpay'}
-        </button>
+        {wallet && (
+          <div style={{ background: 'var(--bg-surface)', padding: 'var(--space-md)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-xl)' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>CineRP Wallet Balance</div>
+            <div style={{ color: 'var(--accent-red)', fontWeight: 700, fontSize: '18px' }}>₹{wallet.balance}</div>
+          </div>
+        )}
 
-        {canPayWithWallet && (
-          <button onClick={handlePayWithWallet} disabled={loading} className="btn-ghost" style={{ padding: '14px 40px', fontSize: '16px', width: '260px' }}>
-            Pay with CineRP (₹{booking.total_amount})
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', alignItems: 'center' }}>
+          <button onClick={handlePay} disabled={loading} className="btn btn-primary" style={{ padding: '16px 40px', fontSize: '16px', width: '100%', maxWidth: '300px' }}>
+            {loading ? 'Please wait...' : 'Pay securely with Razorpay'}
           </button>
-        )}
-        {wallet && booking && !canPayWithWallet && (
-          <p style={{ color: 'var(--text-dim)', fontSize: '12px' }}>
-            Need ₹{(Number(booking.total_amount) - Number(wallet.balance)).toFixed(2)} more CineRP to pay fully with points.
-          </p>
-        )}
+
+          {canPayWithWallet && (
+            <button onClick={handlePayWithWallet} disabled={loading} className="btn btn-ghost" style={{ padding: '16px 40px', fontSize: '16px', width: '100%', maxWidth: '300px' }}>
+              Pay with CineRP
+            </button>
+          )}
+          
+          {wallet && booking && !canPayWithWallet && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: 'var(--space-sm)' }}>
+              Need ₹{(Number(booking.total_amount) - Number(wallet.balance)).toFixed(2)} more CineRP to pay fully with points.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

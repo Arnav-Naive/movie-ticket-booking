@@ -38,7 +38,7 @@ function BookingSummary() {
       }).filter(Boolean);
       setSnackDetails(enriched);
     }).catch(() => setError('Unable to load booking details.'));
-  }, [showId]);
+  }, [showId, navigate, seatIds, selectedSnacks]);
 
   useEffect(() => {
     if (!expiresAt) return;
@@ -69,7 +69,12 @@ function BookingSummary() {
     }
   };
 
-  if (!show) return <div className="container" style={{ padding: '60px 0' }}>Loading...</div>;
+  if (!show) return (
+    <div className="container" style={{ padding: 'var(--space-2xl) 0', maxWidth: '520px', margin: '0 auto' }}>
+      <div className="skeleton" style={{ height: '40px', width: '200px', marginBottom: 'var(--space-xl)' }}></div>
+      <div className="skeleton" style={{ height: '400px', borderRadius: 'var(--radius-lg)' }}></div>
+    </div>
+  );
 
   const ticketTotal = show.price * seats.length;
   const snackTotal = snackDetails.reduce((sum, s) => sum + s.price * s.quantity, 0);
@@ -77,70 +82,88 @@ function BookingSummary() {
   const expired = remaining === 0;
   const mins = remaining !== null ? Math.floor(remaining / 60) : null;
   const secs = remaining !== null ? remaining % 60 : null;
+  const isExpiringSoon = remaining !== null && remaining < 60;
 
   return (
-    <div className="container" style={{ padding: '40px 0', maxWidth: '520px' }}>
-      <h1 style={{ marginBottom: '12px' }}>Booking Summary</h1>
-
+    <div className="container" style={{ padding: 'var(--space-2xl) var(--space-lg)', maxWidth: '560px', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '32px', fontWeight: 800, marginBottom: 'var(--space-xs)' }}>Booking Summary</h1>
+      
       {remaining !== null && !expired && (
-        <p style={{ color: remaining < 60 ? 'var(--red)' : 'var(--text-dim)', fontSize: '14px', marginBottom: '20px' }}>
+        <p style={{ 
+          color: isExpiringSoon ? 'var(--accent-red)' : 'var(--text-muted)', 
+          fontSize: '14px', 
+          marginBottom: 'var(--space-lg)',
+          fontWeight: isExpiringSoon ? 600 : 400,
+          display: 'flex', alignItems: 'center', gap: '8px'
+        }}>
+          {isExpiringSoon && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-red)', animation: 'pulse 1s infinite' }}></span>}
           Seats held for: {mins}:{secs.toString().padStart(2, '0')}
         </p>
       )}
       {expired && (
-        <p style={{ color: 'var(--red)', fontSize: '14px', marginBottom: '20px' }}>
-          Your seat hold has expired. <Link to={`/seats/${showId}`} style={{ color: 'var(--red)', fontWeight: 600 }}>Select seats again</Link>
-        </p>
+        <div style={{ 
+          background: 'rgba(224, 38, 63, 0.1)', border: '1px solid var(--accent-red)',
+          color: 'var(--accent-red)', padding: 'var(--space-md)', borderRadius: 'var(--radius-md)',
+          marginBottom: 'var(--space-lg)', fontSize: '14px' 
+        }}>
+          Your seat hold has expired. <Link to={`/seats/${showId}`} style={{ color: 'white', fontWeight: 600, textDecoration: 'underline' }}>Select seats again</Link>
+        </div>
       )}
 
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '24px' }}>
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontWeight: 600, fontSize: '18px' }}>{show.movie_title}</div>
-          <div style={{ color: 'var(--text-dim)', fontSize: '14px' }}>{show.theatre_name} · {show.screen_name}</div>
-          <div style={{ color: 'var(--text-dim)', fontSize: '14px' }}>{show.date} · {show.start_time}</div>
+      <div className="card" style={{ padding: 'var(--space-xl)' }}>
+        <div style={{ marginBottom: 'var(--space-lg)' }}>
+          <div style={{ fontWeight: 700, fontSize: '24px', color: 'var(--text-main)', marginBottom: 'var(--space-xs)' }}>{show.movie_title}</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '15px', marginBottom: '4px' }}>{show.theatre_name} &bull; {show.screen_name}</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '15px' }}>{new Date(show.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} &bull; {show.start_time}</div>
         </div>
 
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginBottom: '16px' }}>
-          <div style={{ marginBottom: '4px' }}>Seats: {seats.map(s => `${s.seat_row}${s.seat_number}`).join(', ')}</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-dim)', fontSize: '14px' }}>
+        <div style={{ borderTop: '1px dashed var(--border-subtle)', paddingTop: 'var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
+          <div style={{ marginBottom: 'var(--space-sm)', fontSize: '15px', color: 'var(--text-main)', fontWeight: 500 }}>
+            Seats: {seats.map(s => `${s.seat_row}${s.seat_number}`).join(', ')}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '14px' }}>
             <span>{seats.length} ticket(s) × ₹{show.price}</span>
-            <span>₹{ticketTotal}</span>
+            <span>₹{ticketTotal.toFixed(2)}</span>
           </div>
         </div>
 
         {snackDetails.length > 0 && (
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '8px' }}>🍿 FOOD & BEVERAGES</div>
+          <div style={{ borderTop: '1px dashed var(--border-subtle)', paddingTop: 'var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-md)', textTransform: 'uppercase', letterSpacing: '1px' }}>Food & Beverages</div>
             {snackDetails.map(s => (
-              <div key={s.snack_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '4px' }}>
+              <div key={s.snack_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', marginBottom: 'var(--space-sm)', color: 'var(--text-main)' }}>
                 <span>{s.quantity} × {s.name}</span>
                 <span>₹{(s.price * s.quantity).toFixed(2)}</span>
               </div>
             ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-dim)', marginTop: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: 'var(--text-muted)', marginTop: 'var(--space-md)' }}>
               <span>Snacks Total</span>
               <span>₹{snackTotal.toFixed(2)}</span>
             </div>
           </div>
         )}
 
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginBottom: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: 'var(--text-dim)' }}>
+        <div style={{ borderTop: '1px dashed var(--border-subtle)', paddingTop: 'var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: 'var(--text-muted)' }}>
             <span>Convenience Fee</span>
-            <span>₹{CONVENIENCE_FEE}</span>
+            <span>₹{CONVENIENCE_FEE.toFixed(2)}</span>
           </div>
         </div>
 
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '18px' }}>
-          <span>Total</span>
+        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-lg)', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '24px', color: 'var(--accent-red)' }}>
+          <span>Total Payable</span>
           <span>₹{grandTotal.toFixed(2)}</span>
         </div>
       </div>
 
-      {error && <p style={{ color: 'var(--red)', marginTop: '16px' }}>{error}</p>}
+      {error && (
+        <div style={{ color: 'white', background: 'var(--accent-red)', marginTop: 'var(--space-lg)', padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
+          {error}
+        </div>
+      )}
 
-      <button onClick={handleConfirm} disabled={creating || expired} className="btn-primary" style={{ width: '100%', marginTop: '24px' }}>
-        {creating ? 'Processing...' : 'Proceed to Payment'}
+      <button onClick={handleConfirm} disabled={creating || expired} className="btn btn-primary" style={{ width: '100%', marginTop: 'var(--space-xl)', padding: '16px', fontSize: '16px' }}>
+        {creating ? 'Processing...' : `Proceed to Payment (₹${grandTotal.toFixed(2)})`}
       </button>
     </div>
   );

@@ -34,57 +34,64 @@ function Login() {
   };
 
   return (
-    <div className="container" style={{
-      minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px'
+    <div style={{
+      minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-2xl) var(--space-md)',
+      background: 'radial-gradient(circle at center, var(--bg-surface) 0%, var(--bg-base) 100%)'
     }}>
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '14px',
-        padding: '36px', maxWidth: '380px', width: '100%'
+      <div className="card" style={{
+        padding: 'var(--space-2xl) var(--space-xl)', maxWidth: '400px', width: '100%',
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)'
       }}>
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <Link to="/" style={{ fontSize: '24px', fontWeight: 700 }}>
-            Cine<span style={{ color: 'var(--red)' }}>Max</span>
+        <div style={{ textAlign: 'center', marginBottom: 'var(--space-xl)' }}>
+          <Link to="/" style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-1px' }}>
+            Cine<span style={{ color: 'var(--accent-red)' }}>Max</span>
           </Link>
-          <p style={{ color: 'var(--text-dim)', fontSize: '14px', marginTop: '8px' }}>
-            Welcome back — log in to continue
+          <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: 'var(--space-sm)' }}>
+            Welcome back to the movies
           </p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <label style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '6px', display: 'block' }}>
-            Username
-          </label>
-          <input
-            className="input-field"
-            placeholder="Enter your username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            style={{ marginBottom: '16px' }}
-          />
+          <div style={{ marginBottom: 'var(--space-md)' }}>
+            <label style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', fontWeight: 500 }}>
+              Username
+            </label>
+            <input
+              className="input-field"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
 
-          <label style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '6px', display: 'block' }}>
-            Password
-          </label>
-          <input
-            className="input-field"
-            placeholder="Enter your password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ marginBottom: '20px' }}
-          />
+          <div style={{ marginBottom: 'var(--space-xl)' }}>
+            <label style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', display: 'block', fontWeight: 500 }}>
+              Password
+            </label>
+            <input
+              className="input-field"
+              placeholder="Enter your password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-          {error && <p style={{ color: 'var(--red)', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
+          {error && (
+            <div style={{ color: 'var(--accent-red)', fontSize: '13px', marginBottom: 'var(--space-md)', background: 'rgba(224,38,63,0.1)', padding: '10px', borderRadius: 'var(--radius-sm)' }}>
+              {error}
+            </div>
+          )}
 
-          <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%' }}>
+          <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', padding: '14px', fontSize: '16px' }}>
             {loading ? 'Logging in...' : 'Log In'}
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: 'var(--text-dim)' }}>
-          Don't have an account? <Link to="/register" style={{ color: 'var(--red)', fontWeight: 600 }}>Sign up</Link>
+        <p style={{ textAlign: 'center', marginTop: 'var(--space-xl)', fontSize: '14px', color: 'var(--text-muted)' }}>
+          Don't have an account? <Link to="/register" style={{ color: 'var(--accent-red)', fontWeight: 600 }} className="hover-text-red">Sign up</Link>
         </p>
       </div>
     </div>

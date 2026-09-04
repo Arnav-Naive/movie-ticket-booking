@@ -62,84 +62,183 @@ function SeatSelection() {
     }
   };
 
-  if (loading) return <div className="container" style={{ padding: '60px 0' }}>Loading seats...</div>;
+  if (loading) return (
+    <div className="container" style={{ padding: 'var(--space-2xl) 0', textAlign: 'center' }}>
+      <div className="skeleton" style={{ width: '200px', height: '40px', margin: '0 auto var(--space-xl)' }}></div>
+      <div className="skeleton" style={{ width: '80%', maxWidth: '600px', height: '300px', margin: '0 auto' }}></div>
+    </div>
+  );
 
   const rows = [...new Set(seats.map(s => s.seat_row))].sort();
+  const totalPrice = seats.filter(s => selected.includes(s.seat)).reduce((sum, s) => sum + parseFloat(s.price), 0);
 
   return (
-    <div className="container" style={{ padding: '40px 0' }}>
-      <h1 style={{ marginBottom: '8px' }}>Select Seats</h1>
+    <div className="container" style={{ padding: 'var(--space-xl) var(--space-lg)' }}>
+      <div style={{ textAlign: 'center', marginBottom: 'var(--space-xl)' }}>
+        <h1 style={{ fontSize: '32px', fontWeight: 800, marginBottom: 'var(--space-sm)' }}>Select Your Seats</h1>
+        <p style={{ color: 'var(--text-muted)' }}>Choose exactly where you want to sit</p>
+      </div>
 
-      <div style={{
-        display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center',
-        margin: '20px 0', flexWrap: 'wrap'
+      <div className="card" style={{ 
+        display: 'flex', gap: 'var(--space-sm)', alignItems: 'center', justifyContent: 'center',
+        padding: 'var(--space-md)', margin: '0 auto var(--space-xl)', flexWrap: 'wrap', maxWidth: '600px',
+        background: 'var(--bg-surface)'
       }}>
-        <span style={{ fontSize: '13px', color: 'var(--text-dim)' }}>Need seats together?</span>
+        <span style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: 500 }}>Need seats together?</span>
         <select
           value={findCount}
           onChange={(e) => setFindCount(Number(e.target.value))}
           className="input-field"
-          style={{ width: 'auto', padding: '6px 10px' }}
+          style={{ width: 'auto', padding: '8px 12px', minWidth: '100px' }}
         >
           {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} seat{n > 1 ? 's' : ''}</option>)}
         </select>
-        <button onClick={handleFindSeats} disabled={finding} className="btn-ghost" style={{ padding: '8px 16px', fontSize: '13px' }}>
-          {finding ? 'Finding...' : 'Find Seats'}
+        <button onClick={handleFindSeats} disabled={finding} className="btn btn-ghost" style={{ padding: '8px 16px' }}>
+          {finding ? 'Searching...' : 'Auto-Find Seats'}
         </button>
       </div>
-      {findMessage && <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '13px', marginBottom: '16px' }}>{findMessage}</p>}
+      
+      {findMessage && (
+        <div style={{ 
+          textAlign: 'center', color: 'var(--success)', fontSize: '14px', fontWeight: 500, 
+          marginBottom: 'var(--space-xl)', background: 'rgba(46, 204, 113, 0.1)', 
+          padding: '8px 16px', borderRadius: 'var(--radius-md)', maxWidth: '600px', margin: '0 auto var(--space-xl)'
+        }}>
+          {findMessage}
+        </div>
+      )}
+      
+      {error && (
+        <div style={{ 
+          color: 'white', background: 'var(--accent-red)', marginBottom: 'var(--space-xl)', 
+          textAlign: 'center', padding: '12px', borderRadius: 'var(--radius-md)', maxWidth: '600px', margin: '0 auto var(--space-xl)' 
+        }}>
+          {error}
+        </div>
+      )}
 
-      <div style={{
-        textAlign: 'center', color: 'var(--text-dim)', margin: '16px 0 16px',
-        borderBottom: '2px solid var(--border)', paddingBottom: '8px', fontSize: '13px'
+      {/* Screen container */}
+      <div style={{ 
+        textAlign: 'center', color: 'var(--text-muted)', margin: '0 auto var(--space-2xl)',
+        position: 'relative', width: '100%', maxWidth: '800px', perspective: '800px'
       }}>
-        SCREEN THIS WAY
+        <div style={{
+          height: '40px',
+          background: 'linear-gradient(to bottom, rgba(224,38,63,0.5) 0%, rgba(224,38,63,0) 100%)',
+          transform: 'rotateX(-45deg)',
+          borderRadius: '4px',
+          boxShadow: '0 -10px 20px rgba(224,38,63,0.2)',
+          marginBottom: 'var(--space-sm)'
+        }}></div>
+        <span style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase' }}>Screen</span>
       </div>
 
-      {error && <p style={{ color: 'var(--red)', marginBottom: '16px', textAlign: 'center' }}>{error}</p>}
-
-      <div style={{ overflowX: 'auto', paddingBottom: '8px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginBottom: '32px', minWidth: 'fit-content' }}>
+      {/* Seat Map */}
+      <div style={{ overflowX: 'auto', paddingBottom: 'var(--space-lg)', WebkitOverflowScrolling: 'touch', cursor: 'grab' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', minWidth: 'max-content', margin: '0 auto' }}>
           {rows.map(row => (
-            <div key={row} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span style={{ width: '20px', color: 'var(--text-dim)', fontSize: '13px' }}>{row}</span>
+            <div key={row} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <span style={{ width: '24px', color: 'var(--text-muted)', fontSize: '14px', fontWeight: 600, textAlign: 'right' }}>{row}</span>
               {seats.filter(s => s.seat_row === row).map(seat => {
                 const isSelected = selected.includes(seat.seat);
                 const isAvailable = seat.status === 'AVAILABLE';
+                
+                let bgColor = '#2a2f3a'; // Unavailable
+                let borderColor = 'transparent';
+                let color = '#555';
+                let shadow = 'none';
+
+                if (isAvailable) {
+                  bgColor = 'var(--bg-card)';
+                  borderColor = 'var(--border-subtle)';
+                  color = 'var(--text-main)';
+                }
+                if (isSelected) {
+                  bgColor = 'var(--accent-red)';
+                  borderColor = 'var(--accent-red)';
+                  color = 'white';
+                  shadow = 'var(--shadow-glow)';
+                }
+
                 return (
                   <button
                     key={seat.id}
                     onClick={() => toggleSeat(seat)}
                     disabled={!isAvailable}
                     style={{
-                      width: '36px', height: '36px', borderRadius: '6px',
-                      border: '1px solid var(--border)',
-                      background: isSelected ? 'var(--red)' : isAvailable ? 'var(--card)' : '#2a2f3a',
-                      color: isAvailable ? 'var(--text)' : '#555',
+                      width: '40px', height: '40px', 
+                      borderRadius: '8px 8px 4px 4px', // Seat shape
+                      border: `1px solid ${borderColor}`,
+                      background: bgColor,
+                      color: color,
                       cursor: isAvailable ? 'pointer' : 'not-allowed',
-                      fontSize: '11px', flexShrink: 0
+                      fontSize: '12px', fontWeight: 600, flexShrink: 0,
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: shadow,
+                      transform: isSelected ? 'scale(1.05) translateY(-2px)' : 'scale(1)'
                     }}
-                    title={`${seat.seat_row}${seat.seat_number} (${seat.seat_type})`}
+                    onMouseEnter={(e) => {
+                      if(isAvailable && !isSelected) {
+                        e.currentTarget.style.borderColor = 'var(--accent-red)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if(isAvailable && !isSelected) {
+                        e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }
+                    }}
+                    title={`${seat.seat_row}${seat.seat_number} - ₹${seat.price} (${seat.seat_type})`}
                   >
                     {seat.seat_number}
                   </button>
                 );
               })}
+              <span style={{ width: '24px' }}></span>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginBottom: '32px', fontSize: '13px', color: 'var(--text-dim)', flexWrap: 'wrap' }}>
-        <span>⬜ Available</span>
-        <span style={{ color: 'var(--red)' }}>⬛ Selected</span>
-        <span>⬛ Booked/Held</span>
+      {/* Legend */}
+      <div className="card" style={{ 
+        display: 'flex', gap: 'var(--space-lg)', justifyContent: 'center', 
+        padding: 'var(--space-md)', fontSize: '13px', color: 'var(--text-muted)', 
+        flexWrap: 'wrap', maxWidth: '400px', margin: '0 auto var(--space-xl)' 
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '16px', height: '16px', borderRadius: '4px', border: '1px solid var(--border-subtle)', background: 'var(--bg-card)' }}></div>
+          Available
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '16px', height: '16px', borderRadius: '4px', background: 'var(--accent-red)', boxShadow: 'var(--shadow-glow)' }}></div>
+          <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>Selected</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '16px', height: '16px', borderRadius: '4px', background: '#2a2f3a' }}></div>
+          Booked/Held
+        </div>
       </div>
 
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ marginBottom: '12px' }}>{selected.length} seat(s) selected</p>
-        <button onClick={handleContinue} disabled={selected.length === 0 || holding} className="btn-primary">
-          {holding ? 'Holding seats...' : 'Continue'}
+      {/* Action Bar */}
+      <div className="card" style={{ 
+        padding: 'var(--space-lg)', 
+        position: 'sticky', bottom: 'var(--space-md)', 
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+        flexWrap: 'wrap', gap: 'var(--space-md)', zIndex: 10,
+        background: 'rgba(23, 29, 43, 0.95)', backdropFilter: 'blur(10px)'
+      }}>
+        <div>
+          <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+            {selected.length} seat(s) selected
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-main)' }}>
+            ₹{totalPrice.toFixed(2)}
+          </div>
+        </div>
+        <button onClick={handleContinue} disabled={selected.length === 0 || holding} className="btn btn-primary" style={{ padding: '12px 32px', minWidth: '180px' }}>
+          {holding ? 'Holding seats...' : 'Continue to Snacks'}
         </button>
       </div>
     </div>
