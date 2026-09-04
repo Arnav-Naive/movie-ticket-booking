@@ -30,6 +30,8 @@ import AdminVerify from './pages/admin/AdminVerify';
 import AdminUsers from './pages/admin/AdminUsers';
 import Snacks from './pages/Snacks';
 import AdminSnacks from './pages/admin/AdminSnacks';
+import VerifierRoute from './components/VerifierRoute';
+import ScanTicket from './pages/ScanTicket';
 
 function App() {
   return (
@@ -39,6 +41,7 @@ function App() {
           <BrowserRouter>
             <Navbar />
             <Routes>
+              <Route path="/scan" element={<VerifierRoute><ScanTicket /></VerifierRoute>} />
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

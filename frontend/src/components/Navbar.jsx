@@ -52,6 +52,7 @@ function Navbar() {
         {user && <Link to="/my-bookings">My Bookings</Link>}
         {user && <Link to="/profile">Profile</Link>}
         {user?.is_staff && <Link to="/admin-panel" style={{ color: 'var(--red)' }}>Admin</Link>}
+        {(user?.is_staff || user?.is_verifier) && <Link to="/scan">Scan Tickets</Link>}
         {user && balance !== null && (
           <span style={{
             background: 'var(--card)', border: '1px solid var(--red)', color: 'var(--red)',
