@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'bookings',
     'payments',
     'wallet',
+    'snacks',
 ]
 
 AUTH_USER_MODEL = 'users.User'

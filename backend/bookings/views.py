@@ -13,6 +13,10 @@ import io
 import base64
 from django.db.models import Sum
 from decimal import Decimal
+from snacks.models import Snack, BookingSnack
+
+
+CONVENIENCE_FEE = Decimal('30.00')
 
 
 @api_view(['POST'])
@@ -20,13 +24,13 @@ from decimal import Decimal
 def create_booking(request):
     show_id = request.data.get('show_id')
     seat_ids = request.data.get('show_seat_ids', [])
+    snack_items = request.data.get('snacks', [])  # [{"snack_id": 1, "quantity": 2}, ...]
 
     if not show_id or not seat_ids:
         return Response({"error": "show_id and show_seat_ids are required"}, status=400)
 
     now = timezone.now()
 
-    # Reject booking for a show that has already started
     try:
         show_obj = Show.objects.get(id=show_id)
     except Show.DoesNotExist:
@@ -57,7 +61,25 @@ def create_booking(request):
             )
 
         show = show_seats.first().show
-        total_amount = show.price * len(seat_ids)
+        ticket_amount = show.price * len(seat_ids)
+
+        # Validate and price snacks from the DB — never trust frontend-supplied prices
+        snack_lines = []
+        snack_total = Decimal('0.00')
+        for item in snack_items:
+            snack_id = item.get('snack_id')
+            quantity = item.get('quantity', 0)
+            if not snack_id or quantity < 1:
+                continue
+            try:
+                snack = Snack.objects.get(id=snack_id, is_available=True)
+            except Snack.DoesNotExist:
+                return Response({"error": f"Snack {snack_id} not found or unavailable"}, status=400)
+            line_total = snack.price * quantity
+            snack_total += line_total
+            snack_lines.append((snack, quantity, line_total))
+
+        total_amount = ticket_amount + snack_total + CONVENIENCE_FEE
 
         booking = Booking.objects.create(
             user=request.user,
@@ -68,6 +90,12 @@ def create_booking(request):
 
         for s in show_seats:
             BookingSeat.objects.create(booking=booking, show_seat=s)
+
+        for snack, quantity, line_total in snack_lines:
+            BookingSnack.objects.create(
+                booking=booking, snack=snack, quantity=quantity,
+                unit_price=snack.price, total_price=line_total
+            )
 
     serializer = BookingSerializer(booking)
     return Response(serializer.data, status=201)

@@ -29,4 +29,5 @@ urlpatterns = [
     path('api/', include('payments.urls')),
     path('api/admin/dashboard/', admin_dashboard, name='admin-dashboard'),
     path('api/', include('wallet.urls')),
+    path('api/', include('snacks.urls')),
 ]
