@@ -14,7 +14,12 @@ import base64
 from django.db.models import Sum
 from decimal import Decimal
 from snacks.models import Snack, BookingSnack
+from rest_framework.permissions import BasePermission
 
+
+class IsAdminOrVerifier(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and (request.user.is_staff or request.user.is_verifier))
 
 CONVENIENCE_FEE = Decimal('30.00')
 
@@ -134,7 +139,7 @@ def booking_ticket(request, booking_id):
 
 # verification endpoint
 @api_view(['POST'])
-@permission_classes([IsAdminUser])
+@permission_classes([IsAdminOrVerifier])
 def verify_ticket(request):
     token = request.data.get('token')
     if not token:

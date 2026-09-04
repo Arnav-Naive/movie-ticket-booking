@@ -21,4 +21,4 @@ class RegisterSerializer(serializers.ModelSerializer):
 class AdminUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'is_active', 'is_staff', 'date_joined']
+        fields = ['id', 'username', 'email', 'is_active', 'is_staff', 'is_verifier', 'date_joined']

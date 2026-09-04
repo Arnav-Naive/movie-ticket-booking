@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import RegisterView, MeView, AdminUserListView, toggle_user_active
+from .views import RegisterView, MeView, AdminUserListView, toggle_user_active, toggle_verifier
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -9,4 +9,5 @@ urlpatterns = [
     path('me/', MeView.as_view(), name='me'),
     path('admin/list/', AdminUserListView.as_view(), name='admin-user-list'),
     path('admin/<int:user_id>/toggle-active/', toggle_user_active, name='toggle-user-active'),
+    path('admin/<int:user_id>/toggle-verifier/', toggle_verifier, name='toggle-verifier'),
 ]

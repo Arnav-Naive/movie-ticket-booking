@@ -22,6 +22,7 @@ class MeView(APIView):
             "username": request.user.username,
             "email": request.user.email,
             "is_staff": request.user.is_staff,
+            "is_verifier": request.user.is_verifier,
         })
 
 
@@ -43,3 +44,17 @@ def toggle_user_active(request, user_id):
     target.is_active = not target.is_active
     target.save()
     return Response({"id": target.id, "is_active": target.is_active})
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def toggle_verifier(request, user_id):
+    try:
+        target = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
+    if target.is_staff:
+        return Response({"error": "Admins already have verification access"}, status=400)
+    target.is_verifier = not target.is_verifier
+    target.save()
+    return Response({"id": target.id, "is_verifier": target.is_verifier})
