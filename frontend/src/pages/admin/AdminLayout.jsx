@@ -5,6 +5,7 @@ const links = [
   { to: '/admin-panel/movies', label: 'Movies' },
   { to: '/admin-panel/theatres', label: 'Theatres & Screens' },
   { to: '/admin-panel/shows', label: 'Shows' },
+  { to: '/admin-panel/snacks', label: 'Snacks & Combos' },
   { to: '/admin-panel/bookings', label: 'Bookings' },
   { to: '/admin-panel/verify', label: 'Verify Ticket' },
   { to: '/admin-panel/users', label: 'Users' },

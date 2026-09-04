@@ -29,6 +29,7 @@ import AdminBookings from './pages/admin/AdminBookings';
 import AdminVerify from './pages/admin/AdminVerify';
 import AdminUsers from './pages/admin/AdminUsers';
 import Snacks from './pages/Snacks';
+import AdminSnacks from './pages/admin/AdminSnacks';
 
 function App() {
   return (
@@ -62,6 +63,7 @@ function App() {
                 <Route path="bookings" element={<AdminBookings />} />
                 <Route path="verify" element={<AdminVerify />} />
                 <Route path="users" element={<AdminUsers />} />
+                <Route path="snacks" element={<AdminSnacks />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
