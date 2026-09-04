@@ -39,6 +39,14 @@ function Ticket() {
           <div style={{ marginBottom: '6px' }}>
             <strong style={{ color: 'var(--text)' }}>Seats:</strong> {ticket.booking_seats.map(s => `${s.seat_row}${s.seat_number}`).join(', ')}
           </div>
+          {ticket.booking_snacks?.length > 0 && (
+            <div style={{ marginBottom: '6px' }}>
+              <strong style={{ color: 'var(--text)' }}>🍿 Food & Beverages:</strong>
+              {ticket.booking_snacks.map(s => (
+                <div key={s.id} style={{ marginLeft: '8px' }}>{s.quantity} × {s.snack_name}</div>
+              ))}
+            </div>
+          )}
           <div><strong style={{ color: 'var(--text)' }}>Amount:</strong> ₹{ticket.total_amount}</div>
         </div>
 

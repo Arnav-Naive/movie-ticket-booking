@@ -28,6 +28,7 @@ import AdminShows from './pages/admin/AdminShows';
 import AdminBookings from './pages/admin/AdminBookings';
 import AdminVerify from './pages/admin/AdminVerify';
 import AdminUsers from './pages/admin/AdminUsers';
+import Snacks from './pages/Snacks';
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
               <Route path="/movies/:id" element={<MovieDetails />} />
               <Route path="/book/:movieId" element={<BookShow />} />
               <Route path="/seats/:showId" element={<SeatSelection />} />
+              <Route path="/snacks/:showId" element={<Snacks />} />
               <Route path="/summary/:showId" element={<BookingSummary />} />
               <Route path="/ticket/:bookingId" element={<Ticket />} />
               <Route path="/my-bookings" element={<MyBookings />} />

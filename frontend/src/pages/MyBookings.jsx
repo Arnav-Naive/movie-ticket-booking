@@ -61,6 +61,9 @@ function MyBookings() {
                 <div style={{ color: 'var(--text-dim)', fontSize: '14px' }}>
                   {b.booking_reference} · ₹{b.total_amount} ·{' '}
                   <span style={{ color: statusColor(b.status) }}>{b.status}</span>
+                  {b.booking_snacks?.length > 0 && (
+                    <span style={{ marginLeft: '8px', color: 'var(--text)' }}>🍿 Snacks Added</span>
+                  )}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>

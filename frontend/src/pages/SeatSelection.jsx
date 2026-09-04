@@ -54,7 +54,7 @@ function SeatSelection() {
     setError('');
     try {
       const res = await api.post(`/shows/${showId}/hold-seats/`, { seat_ids: selected });
-      navigate(`/summary/${showId}`, { state: { seatIds: selected, expiresAt: res.data.expires_at } });
+      navigate(`/snacks/${showId}`, { state: { seatIds: selected, expiresAt: res.data.expires_at } });
     } catch (err) {
       setError(err.response?.data?.error || 'Unable to hold seats.');
     } finally {
