@@ -15,7 +15,7 @@ class Snack(models.Model):
     description = models.CharField(max_length=255, blank=True)
     category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='SNACK')
     price = models.DecimalField(max_digits=8, decimal_places=2)
-    image = models.URLField(blank=True)
+    image = models.CharField(max_length=500, blank=True)
     is_available = models.BooleanField(default=True)
 
     def __str__(self):
