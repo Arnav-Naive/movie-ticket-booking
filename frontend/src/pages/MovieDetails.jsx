@@ -130,7 +130,16 @@ function MovieDetails() {
       {movie.trailer_key && (
         <div className="container" style={{ paddingBottom: 'var(--space-2xl)' }}>
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 'var(--space-md)', textTransform: 'uppercase', letterSpacing: '1px' }}>Official Trailer</div>
-          <div className="card" style={{ position: 'relative', paddingBottom: '56.25%', height: 0, maxWidth: '800px', overflow: 'hidden', padding: 0 }}>
+          <div style={{ 
+            position: 'relative', 
+            paddingBottom: '56.25%', 
+            height: 0, 
+            maxWidth: '800px', 
+            overflow: 'hidden', 
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-subtle)',
+            background: 'var(--bg-card)'
+          }}>
             <iframe
               src={`https://www.youtube.com/embed/${movie.trailer_key}`}
               title="Trailer"

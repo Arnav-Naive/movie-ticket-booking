@@ -129,7 +129,7 @@ function Home() {
   const featured = (movies.filter(m => !isUpcoming(m)).length > 0
     ? movies.filter(m => !isUpcoming(m))
     : movies
-  ).slice(0, 5);
+  ).slice(0, 15);
 
   useEffect(() => {
     if (featured.length < 2) return;

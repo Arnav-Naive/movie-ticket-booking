@@ -70,7 +70,6 @@ function SeatSelection() {
   );
 
   const rows = [...new Set(seats.map(s => s.seat_row))].sort();
-  const totalPrice = seats.filter(s => selected.includes(s.seat)).reduce((sum, s) => sum + parseFloat(s.price), 0);
 
   return (
     <div className="container" style={{ padding: 'var(--space-xl) var(--space-lg)' }}>
@@ -231,10 +230,10 @@ function SeatSelection() {
       }}>
         <div>
           <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-            {selected.length} seat(s) selected
+            Selected Seats
           </div>
           <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-main)' }}>
-            ₹{totalPrice.toFixed(2)}
+            {selected.length} seat(s)
           </div>
         </div>
         <button onClick={handleContinue} disabled={selected.length === 0 || holding} className="btn btn-primary" style={{ padding: '12px 32px', minWidth: '180px' }}>
